@@ -1,0 +1,29 @@
+# Root
+.env.local
+*.log
+
+# Node
+node_modules/
+dist/
+.cache/
+
+# Backend
+backend/node_modules/
+backend/dist/
+backend/uploads/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Docker
+*.pid
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
