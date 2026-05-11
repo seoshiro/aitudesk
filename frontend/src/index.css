@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------
+   AituDesk — Editorial-academic palette (light + dark)
+   OKLCH component values (L C h) — combined with <alpha-value>
+   in tailwind.config.js to support bg-primary/50 etc.
+--------------------------------------------------------------- */
+@layer base {
+  :root {
+    color-scheme: light;
+
+    --background: 0.985 0.004 85;
+    --foreground: 0.22 0.025 260;
+
+    --card: 1 0 0;
+    --card-foreground: 0.22 0.025 260;
+
+    --popover: 0.995 0.003 85;
+    --popover-foreground: 0.22 0.025 260;
+
+    --primary: 0.36 0.14 263;
+    --primary-foreground: 0.99 0.004 85;
+
+    --secondary: 0.955 0.007 85;
+    --secondary-foreground: 0.28 0.025 260;
+
+    --muted: 0.96 0.006 85;
+    --muted-foreground: 0.5 0.018 258;
+
+    --accent: 0.94 0.012 260;
+    --accent-foreground: 0.28 0.025 260;
+
+    --destructive: 0.52 0.19 27;
+    --destructive-foreground: 0.99 0.004 85;
+
+    --border: 0.9 0.012 258;
+    --input: 0.92 0.01 258;
+    --ring: 0.36 0.14 263;
+
+    --success: 0.5 0.12 155;
+    --warning: 0.62 0.14 65;
+    --info:    0.5 0.12 245;
+    --danger:  0.52 0.19 27;
+
+    --chart-1: 0.36 0.14 263;
+    --chart-2: 0.58 0.12 155;
+    --chart-3: 0.7 0.13 70;
+    --chart-4: 0.55 0.17 27;
+    --chart-5: 0.65 0.02 260;
+
+    --radius: 0.5rem;
+
+    --sidebar: 0.97 0.008 85;
+    --sidebar-foreground: 0.22 0.025 260;
+    --sidebar-primary: 0.36 0.14 263;
+    --sidebar-primary-foreground: 0.99 0.004 85;
+    --sidebar-accent: 0.93 0.012 260;
+    --sidebar-accent-foreground: 0.22 0.025 260;
+    --sidebar-border: 0.9 0.012 258;
+    --sidebar-ring: 0.36 0.14 263;
+  }
+
+  .dark {
+    color-scheme: dark;
+
+    --background: 0.16 0.015 260;
+    --foreground: 0.95 0.008 85;
+
+    --card: 0.2 0.018 260;
+    --card-foreground: 0.95 0.008 85;
+
+    --popover: 0.2 0.018 260;
+    --popover-foreground: 0.95 0.008 85;
+
+    --primary: 0.72 0.14 260;
+    --primary-foreground: 0.14 0.02 260;
+
+    --secondary: 0.26 0.018 260;
+    --secondary-foreground: 0.95 0.008 85;
+
+    --muted: 0.24 0.015 260;
+    --muted-foreground: 0.68 0.014 260;
+
+    --accent: 0.28 0.02 260;
+    --accent-foreground: 0.95 0.008 85;
+
+    --destructive: 0.63 0.2 27;
+    --destructive-foreground: 0.98 0.004 85;
+
+    --border: 0.3 0.015 260;
+    --input: 0.3 0.015 260;
+    --ring: 0.72 0.14 260;
+
+    --success: 0.72 0.14 155;
+    --warning: 0.78 0.15 70;
+    --info:    0.7 0.14 245;
+    --danger:  0.68 0.2 27;
+
+    --chart-1: 0.72 0.14 260;
+    --chart-2: 0.72 0.14 155;
+    --chart-3: 0.78 0.14 70;
+    --chart-4: 0.68 0.17 27;
+    --chart-5: 0.72 0.02 260;
+
+    --sidebar: 0.18 0.015 260;
+    --sidebar-foreground: 0.95 0.008 85;
+    --sidebar-primary: 0.72 0.14 260;
+    --sidebar-primary-foreground: 0.14 0.02 260;
+    --sidebar-accent: 0.26 0.02 260;
+    --sidebar-accent-foreground: 0.95 0.008 85;
+    --sidebar-border: 0.3 0.015 260;
+    --sidebar-ring: 0.72 0.14 260;
+  }
+
+  * { border-color: oklch(var(--border)); }
+  html { @apply antialiased; }
+  body {
+    background-color: oklch(var(--background));
+    color: oklch(var(--foreground));
+    font-feature-settings: "ss01", "cv02", "cv03", "cv11";
+    transition: background-color 0.15s ease, color 0.15s ease;
+    @apply font-sans;
+  }
+
+  .font-serif {
+    font-feature-settings: "onum" 1, "pnum" 1, "liga" 1, "dlig" 1;
+    font-optical-sizing: auto;
+  }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+
+  ::selection {
+    background: color-mix(in oklch, oklch(var(--primary)) 20%, transparent);
+    color: oklch(var(--foreground));
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, oklch(var(--foreground)) 14%, transparent);
+    border-radius: 8px;
+    border: 2px solid oklch(var(--background));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklch, oklch(var(--foreground)) 28%, transparent);
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+}
+
+/* Editorial rule grid */
+.rule-grid {
+  background-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(2rem - 1px),
+    color-mix(in oklch, currentColor 12%, transparent) calc(2rem - 1px),
+    color-mix(in oklch, currentColor 12%, transparent) 2rem
+  );
+  background-size: 100% 2rem;
+}
+
+.masthead-rule {
+  border-bottom: 1px solid oklch(var(--foreground));
+}
+
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+.typing-dot { animation: typing-dot 1.2s infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes pulse-sla {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

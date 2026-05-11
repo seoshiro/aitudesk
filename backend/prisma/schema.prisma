@@ -1,0 +1,216 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  AGENT
+  ADMIN
+}
+
+enum TicketStatus {
+  NEW
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+  REOPENED
+}
+
+enum TicketCategory {
+  HARDWARE
+  SOFTWARE
+  NETWORK
+  OTHER
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum MessageType {
+  PUBLIC
+  INTERNAL
+}
+
+enum NotificationType {
+  TICKET_ASSIGNED
+  NEW_MESSAGE
+  STATUS_CHANGED
+  SLA_WARNING
+  SLA_BREACH
+  TICKET_RATED
+  TICKET_REOPENED
+}
+
+// ─── Models ────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(USER)
+  avatarUrl    String?
+  specializations TicketCategory[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  createdTickets   Ticket[]        @relation("CreatedTickets")
+  assignedTickets  Ticket[]        @relation("AssignedTickets")
+  messages         TicketMessage[]
+  notifications    Notification[]
+  ratings          Rating[]
+  refreshTokens    RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Ticket {
+  id           String         @id @default(cuid())
+  ticketNumber Int            @default(autoincrement())
+  subject      String
+  description  String
+  category     TicketCategory
+  priority     Priority
+  status       TicketStatus   @default(NEW)
+
+  creatorId    String
+  creator      User           @relation("CreatedTickets", fields: [creatorId], references: [id])
+
+  assigneeId   String?
+  assignee     User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
+
+  // SLA
+  slaDeadlineResponse DateTime?
+  slaDeadlineResolve  DateTime?
+  slaBreached         Boolean  @default(false)
+  firstResponseAt     DateTime?
+  resolvedAt          DateTime?
+  waitingSince        DateTime?
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // Relations
+  messages     TicketMessage[]
+  attachments  TicketAttachment[]
+  rating       Rating?
+  notifications Notification[]
+
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id        String      @id @default(uuid())
+  ticketId  String
+  ticket    Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id])
+  content   String
+  type      MessageType @default(PUBLIC)
+  readBy    String[]    @default([])
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  attachments TicketAttachment[]
+
+  @@map("ticket_messages")
+}
+
+model TicketAttachment {
+  id        String  @id @default(uuid())
+  ticketId  String
+  ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  messageId String?
+  message   TicketMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  filename  String
+  mimetype  String
+  size      Int
+  url       String
+
+  uploadedAt DateTime @default(now())
+
+  @@map("ticket_attachments")
+}
+
+model SlaPolicy {
+  id               String   @id @default(uuid())
+  priority         Priority @unique
+  responseHours    Int
+  resolutionHours  Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("sla_policies")
+}
+
+model KnowledgeArticle {
+  id         String         @id @default(uuid())
+  title      String
+  content    String
+  category   TicketCategory
+  tags       String[]       @default([])
+  authorId   String
+  published  Boolean        @default(true)
+  viewCount  Int            @default(0)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@map("knowledge_articles")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticketId  String?
+  ticket    Ticket?          @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@map("notifications")
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  ticketId  String   @unique
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  score     Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@map("ratings")
+}
