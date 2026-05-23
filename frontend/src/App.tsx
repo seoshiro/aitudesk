@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
-import { useAuthStore } from './store/authStore';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { useAuthStore, type AuthUser } from './store/authStore';
+import { api } from './api/axios';
 import AppLayout from './layouts/AppLayout';
 import AuthLayout from './layouts/AuthLayout';
 
@@ -46,6 +47,38 @@ function FullPageSpinner() {
 }
 
 export default function App() {
+  const user = useAuthStore((s) => s.user);
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const logout = useAuthStore((s) => s.logout);
+  const [checkingSession, setCheckingSession] = useState(Boolean(user));
+
+  useEffect(() => {
+    if (!user) {
+      setCheckingSession(false);
+      return;
+    }
+
+    let active = true;
+    api.post<{ accessToken: string; user: AuthUser }>('/auth/refresh')
+      .then((r) => {
+        if (!active) return;
+        setAuth(r.data.user, r.data.accessToken);
+      })
+      .catch(() => {
+        if (!active) return;
+        logout();
+      })
+      .finally(() => {
+        if (active) setCheckingSession(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (checkingSession) return <FullPageSpinner />;
+
   return (
     <BrowserRouter>
       <Suspense fallback={<FullPageSpinner />}>

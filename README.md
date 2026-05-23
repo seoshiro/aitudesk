@@ -1,6 +1,6 @@
 # AituDesk — Service Desk для колледжа
 
-> Полнофункциональная веб-платформа для управления IT-заявками (тикетами) с реал-тайм чатом, SLA-контролем, ролевой моделью и базой знаний.
+> Полнофункциональная веб-платформа для управления IT-заявками (тикетами) с реал-тайм чатом, SLA-контролем, ролевой моделью, AI-ассистентом, мониторингом и PDF-отчётами.
 
 Проект состоит из Express/Prisma/Socket.IO бэкенда, React + Vite SPA фронтенда и PostgreSQL. Всё поднимается одной командой через Docker Compose.
 
@@ -11,13 +11,20 @@
 | Слой | Технологии |
 |---|---|
 | **Frontend** | React 18, TypeScript, Vite 5, React Router 6, Zustand, Tailwind CSS v3, shadcn/ui, Recharts, Socket.IO client, sonner, lucide-react |
-| **Backend** | Node 20, Express 4, TypeScript, Prisma 5, Socket.IO, Zod, JWT, bcrypt, Multer, Helmet, OpenAI SDK |
+| **Backend** | Node 20, Express 4, TypeScript, Prisma 5, Socket.IO, Zod, JWT, bcrypt, Multer, Helmet, OpenAI SDK, pdf-lib, prom-client |
 | **Database** | PostgreSQL 17 |
 | **AI** | Groq (llama-3.3-70b-versatile), OpenAI-compatible SDK, RAG по базе знаний |
 | **Runtime** | Docker Compose (6 сервисов) |
 | **Typography** | **Literata** (serif, editorial), **Geist Sans / Geist Mono** |
 
 Визуальный язык — editorial/газета: serif-заголовки, § нумерация секций, тонкие границы, строгая типографика.
+
+---
+
+## Документация для защиты
+
+- **README.md** — техническая документация: запуск, стек, архитектура, API, мониторинг, тесты.
+- **GUIDE.md** — готовый гайд для дипломной защиты: структура выступления, демо-сценарий, сильные стороны проекта, вопросы комиссии и ответы.
 
 ---
 
@@ -98,6 +105,7 @@ aitudesk/
 │   │   └── index.ts
 │   ├── Dockerfile
 │   ├── entrypoint.sh        # prisma db push → seed → node dist
+│   ├── assets/fonts/        # PT Sans Regular/Bold для PDF с кириллицей
 │   └── .env
 ├── frontend/
 │   ├── src/
@@ -134,7 +142,8 @@ aitudesk/
 │   └── grafana/provisioning/ # Datasource + dashboard auto-provisioning
 ├── docker-compose.yml        # postgres / backend / frontend / pgadmin / prometheus / grafana
 ├── .env                      # Порты и БД-креды корневого compose
-└── README.md
+├── package.json
+└── GUIDE.md                 # шпаргалка для дипломной защиты
 ```
 
 ---
@@ -160,9 +169,9 @@ NEW ──▶ IN_PROGRESS ──▶ WAITING ──▶ RESOLVED ──▶ CLOSED
 
 | Приоритет | Время реакции | Время решения |
 |---|---|---|
-| `CRITICAL` | 30 мин | 1 ч |
-| `HIGH` | 1 ч | 4 ч |
-| `MEDIUM` | 4 ч | 24 ч |
+| `CRITICAL` | 2 ч | 4 ч |
+| `HIGH` | 4 ч | 8 ч |
+| `MEDIUM` | 8 ч | 24 ч |
 | `LOW` | 24 ч | 72 ч |
 
 Фоновый воркер (`checkSlaBreaches`) раз в минуту проставляет `slaBreached=true` просроченным тикетам, которые не в статусе `WAITING/RESOLVED/CLOSED`.
@@ -235,7 +244,7 @@ PGADMIN_PASSWORD=pgadmin_secret_2024
 
 ```env
 # AI Assistant — любой OpenAI-совместимый провайдер
-AI_API_KEY=gsk_...         # Groq API key (console.groq.com)
+AI_API_KEY=your_groq_api_key_here
 AI_BASE_URL=https://api.groq.com/openai/v1
 AI_MODEL=llama-3.3-70b-versatile
 ```
@@ -386,10 +395,24 @@ Prometheus автоматически скрейпит `backend:4000/metrics` к
 
 Содержит:
 - Количество созданных и закрытых тикетов
+- Количество открытых тикетов
+- Количество нарушений SLA
 - Среднее время решения (часы)
 - Средний рейтинг удовлетворённости
+- Разбивку тикетов по категориям
+- Разбивку тикетов по приоритетам
 
 Заголовки ответа: `Content-Type: application/pdf`, `Content-Disposition: attachment`.
+
+### Дизайн отчёта
+
+PDF выполнен в том же editorial-стиле, что и интерфейс:
+
+- **Русская типографика** — PT Sans Regular/Bold через `@pdf-lib/fontkit`
+- **§-секции** — «Ключевые метрики», «Разбивка по категориям», «Разбивка по приоритетам»
+- **Цветные KPI-карточки** — создано, закрыто, открыто, среднее время, удовлетворённость, SLA
+- **Горизонтальные бары** — понятная визуальная аналитика без тяжёлых chart-библиотек
+- **Worker Thread** — генерация не блокирует основной event loop
 
 ### Worker Thread
 
@@ -440,16 +463,16 @@ npm run test:coverage # однократный прогон + отчёт по п
 
 Файлы тестов: `backend/tests/*.test.ts`, конфигурация: `backend/vitest.config.ts`, setup: `backend/tests/setup.ts`.
 
-### Покрытие (80+ тестов, 11 модулей)
+### Покрытие (104 теста, 11 модулей)
 
 | Модуль | Кол-во | Что тестируется |
 |---|---|---|
-| `auth` | 11 | register (успех, дубликат, невалидный ввод), login (верный/неверный пароль), logout, refresh без cookie |
-| `tickets` | 18 | Создание, список (фильтры, пагинация, поиск), получение по ID, контроль доступа USER, смена статусов (IN_PROGRESS → RESOLVED → CLOSED), переназначение (ADMIN), рейтинг (1–5, только CLOSED, только создатель) |
-| `users` | 10 | Профиль, обновление, список (ADMIN), смена ролей (ADMIN), агенты, RBAC |
-| `messages` | 5 | Получение, создание, INTERNAL-запрет для USER, пустой контент, 404 |
-| `dashboard` | 8 | Статистика по роли (USER/AGENT/ADMIN), tickets-by-day, by-category, agents, RBAC |
-| `knowledge` | 10 | Список, поиск, фильтр по категории, viewCount++, CRUD (ADMIN), RBAC |
+| `auth` | 12 | register (успех, дубликат, невалидный ввод), login (верный/неверный пароль), logout, refresh без cookie |
+| `tickets` | 28 | Создание, список (фильтры, пагинация, поиск), получение по ID, контроль доступа USER, смена статусов (IN_PROGRESS → RESOLVED → CLOSED), переназначение (ADMIN), рейтинг (1–5, только CLOSED, только создатель) |
+| `users` | 11 | Профиль, обновление, список (ADMIN), смена ролей (ADMIN), агенты, RBAC |
+| `messages` | 6 | Получение, создание, INTERNAL-запрет для USER, пустой контент, 404 |
+| `dashboard` | 10 | Статистика по роли (USER/AGENT/ADMIN), tickets-by-day, by-category, agents, RBAC |
+| `knowledge` | 12 | Список, поиск, фильтр по категории, viewCount++, CRUD (ADMIN), RBAC |
 | `notifications` | 4 | Список + unreadCount, read-all, read по id, 401 |
 | `reports` | 6 | PDF-генерация (%PDF magic bytes), content-type, content-disposition, валидация month, невалидный месяц |
 | `ai` | — | AI-ассистент тестируется e2e (зависит от внешнего API) |
