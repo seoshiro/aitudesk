@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
-import { authenticate, AuthRequest } from '../middleware/auth';
 
 export const authRouter = Router();
 
@@ -88,7 +87,7 @@ authRouter.post('/refresh', async (req, res: Response) => {
 });
 
 // POST /api/auth/logout
-authRouter.post('/logout', authenticate, async (req: AuthRequest, res: Response) => {
+authRouter.post('/logout', async (req, res: Response) => {
   const token = (req.cookies as Record<string, string>)['refreshToken'];
   if (token) await prisma.refreshToken.deleteMany({ where: { token } });
   res.clearCookie('refreshToken');

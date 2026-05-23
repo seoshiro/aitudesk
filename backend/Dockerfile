@@ -40,6 +40,9 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
+# Font assets for PDF reports (Cyrillic support)
+COPY assets ./assets
+
 # Uploads directory
 RUN mkdir -p uploads
 

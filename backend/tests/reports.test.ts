@@ -8,10 +8,15 @@ describe('GET /api/reports/monthly', () => {
   it('returns PDF for valid month', async () => {
     prismaMock.user.findUnique.mockResolvedValue(TEST_ADMIN);
     prismaMock.ticket.count
+      .mockResolvedValueOnce(40)  // createdCount
       .mockResolvedValueOnce(25)  // closedCount
-      .mockResolvedValueOnce(40); // createdCount
+      .mockResolvedValueOnce(15)  // openCount
+      .mockResolvedValueOnce(3);  // slaBreachedCount
     prismaMock.$queryRaw.mockResolvedValue([{ avg_hours: 6.5 }]);
     prismaMock.rating.aggregate.mockResolvedValue({ _avg: { score: 4.3 }, _count: { score: 15 } });
+    prismaMock.ticket.groupBy
+      .mockResolvedValueOnce([{ category: 'SOFTWARE', _count: { id: 20 } }, { category: 'HARDWARE', _count: { id: 10 } }] as any)
+      .mockResolvedValueOnce([{ priority: 'HIGH', _count: { id: 15 } }, { priority: 'MEDIUM', _count: { id: 25 } }] as any);
 
     const res = await request(app)
       .get('/api/reports/monthly?month=2024-01')
@@ -66,10 +71,15 @@ describe('GET /api/reports/monthly', () => {
   it('user can also download report', async () => {
     prismaMock.user.findUnique.mockResolvedValue(TEST_USER);
     prismaMock.ticket.count
-      .mockResolvedValueOnce(5)
-      .mockResolvedValueOnce(10);
+      .mockResolvedValueOnce(10)   // createdCount
+      .mockResolvedValueOnce(5)    // closedCount
+      .mockResolvedValueOnce(5)    // openCount
+      .mockResolvedValueOnce(0);   // slaBreachedCount
     prismaMock.$queryRaw.mockResolvedValue([{ avg_hours: null }]);
     prismaMock.rating.aggregate.mockResolvedValue({ _avg: { score: null }, _count: { score: 0 } });
+    prismaMock.ticket.groupBy
+      .mockResolvedValueOnce([] as any)
+      .mockResolvedValueOnce([] as any);
 
     const res = await request(app)
       .get('/api/reports/monthly?month=2024-06')

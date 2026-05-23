@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore, type AuthUser } from '../store/authStore';
 
 // In Docker: VITE_API_URL=/api (relative, same-origin through Nginx)
 // In local dev: VITE_API_URL=http://localhost:4000/api
@@ -25,12 +25,16 @@ api.interceptors.response.use(
   async (error: unknown) => {
     if (!axios.isAxiosError(error)) return Promise.reject(error);
     const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined;
+    if (error.response?.status === 401 && originalRequest?.url?.includes('/auth/refresh')) {
+      useAuthStore.getState().logout();
+      return Promise.reject(error);
+    }
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
       if (!refreshing) {
-        refreshing = api.post<{ accessToken: string; user: unknown }>('/auth/refresh')
+        refreshing = axios.post<{ accessToken: string; user: AuthUser }>(`${API_URL}/auth/refresh`, undefined, { withCredentials: true })
           .then((r) => {
-            useAuthStore.getState().setAccessToken(r.data.accessToken);
+            useAuthStore.getState().setAuth(r.data.user, r.data.accessToken);
             return r.data.accessToken;
           })
           .catch(() => {

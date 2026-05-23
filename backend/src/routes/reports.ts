@@ -6,9 +6,9 @@ import { runPdfReport } from '../services/reportRunner';
 export const reportsRouter = Router();
 reportsRouter.use(authenticate);
 
-const MONTH_NAMES = [
-  'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
-  'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr',
+const MONTH_NAMES_RU = [
+  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
 ];
 
 // GET /api/reports/monthly?month=2024-01
@@ -30,51 +30,92 @@ reportsRouter.get('/monthly', async (req: AuthRequest, res: Response) => {
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 1);
 
-  // Closed tickets in the period
-  const closedCount = await prisma.ticket.count({
-    where: {
-      status: { in: ['RESOLVED', 'CLOSED'] },
-      resolvedAt: { gte: startDate, lt: endDate },
-    },
-  });
+  // ── Queries (parallel where possible) ────────────────────────────────────
+  const [
+    createdCount,
+    closedCount,
+    openCount,
+    slaBreachedCount,
+    avgResRaw,
+    avgRatingRaw,
+    byCategoryRaw,
+    byPriorityRaw,
+  ] = await Promise.all([
+    // Created in period
+    prisma.ticket.count({ where: { createdAt: { gte: startDate, lt: endDate } } }),
+    // Closed/Resolved in period
+    prisma.ticket.count({
+      where: {
+        status: { in: ['RESOLVED', 'CLOSED'] },
+        resolvedAt: { gte: startDate, lt: endDate },
+      },
+    }),
+    // Still open (not resolved/closed) created in period
+    prisma.ticket.count({
+      where: {
+        createdAt: { gte: startDate, lt: endDate },
+        status: { notIn: ['RESOLVED', 'CLOSED'] },
+      },
+    }),
+    // SLA breached in period
+    prisma.ticket.count({
+      where: {
+        createdAt: { gte: startDate, lt: endDate },
+        slaBreached: true,
+      },
+    }),
+    // Avg resolution time
+    prisma.$queryRaw<{ avg_hours: number | null }[]>`
+      SELECT EXTRACT(EPOCH FROM AVG("resolvedAt" - "createdAt")) / 3600 AS avg_hours
+      FROM tickets
+      WHERE "resolvedAt" IS NOT NULL
+        AND "resolvedAt" >= ${startDate}
+        AND "resolvedAt" < ${endDate}
+    `,
+    // Avg rating
+    prisma.rating.aggregate({
+      where: { createdAt: { gte: startDate, lt: endDate } },
+      _avg: { score: true },
+      _count: { score: true },
+    }),
+    // By category
+    prisma.ticket.groupBy({
+      by: ['category'],
+      where: { createdAt: { gte: startDate, lt: endDate } },
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+    }),
+    // By priority
+    prisma.ticket.groupBy({
+      by: ['priority'],
+      where: { createdAt: { gte: startDate, lt: endDate } },
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+    }),
+  ]);
 
-  // Average resolution time (hours)
-  const avgResRaw = await prisma.$queryRaw<{ avg_hours: number | null }[]>`
-    SELECT EXTRACT(EPOCH FROM AVG("resolvedAt" - "createdAt")) / 3600 AS avg_hours
-    FROM tickets
-    WHERE "resolvedAt" IS NOT NULL
-      AND "resolvedAt" >= ${startDate}
-      AND "resolvedAt" < ${endDate}
-  `;
-  const avgHours = avgResRaw[0]?.avg_hours ?? 0;
-
-  // Average satisfaction rating
-  const avgRatingRaw = await prisma.rating.aggregate({
-    where: {
-      createdAt: { gte: startDate, lt: endDate },
-    },
-    _avg: { score: true },
-    _count: { score: true },
-  });
+  const avgHours = avgResRaw[0]?.avg_hours ?? null;
   const avgRating = avgRatingRaw._avg.score;
   const ratingCount = avgRatingRaw._count.score;
 
-  // Total tickets created in the period
-  const createdCount = await prisma.ticket.count({
-    where: { createdAt: { gte: startDate, lt: endDate } },
-  });
+  const byCategory = byCategoryRaw.map(r => ({ category: r.category, count: r._count.id }));
+  const byPriority = byPriorityRaw.map(r => ({ priority: r.priority, count: r._count.id }));
+
+  const monthLabel = `${MONTH_NAMES_RU[month - 1]} ${year} г.`;
 
   // ── Build PDF in a Worker Thread (event-loop friendly) ─────────────────
-  const monthName = MONTH_NAMES[month - 1] ?? '';
   const pdfBuffer = await runPdfReport({
     monthParam,
-    monthName,
-    year,
+    monthLabel,
     createdCount,
     closedCount,
+    openCount,
     avgHours: avgHours ? Number(avgHours) : null,
     avgRating: avgRating ?? null,
     ratingCount: ratingCount ?? 0,
+    slaBreachedCount,
+    byCategory,
+    byPriority,
   });
 
   res.set({
