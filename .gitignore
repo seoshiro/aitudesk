@@ -2,6 +2,9 @@
 .env.local
 *.log
 .windsurf/
+.agents/
+.continue/
+.impeccable.md
 skills-lock.json
 
 # Node
