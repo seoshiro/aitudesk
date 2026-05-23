@@ -1,6 +1,8 @@
 # Root
 .env.local
 *.log
+.windsurf/
+skills-lock.json
 
 # Node
 node_modules/
