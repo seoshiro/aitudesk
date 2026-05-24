@@ -1,6 +1,6 @@
 # AituDesk — Service Desk для колледжа
 
-> Полнофункциональная веб-платформа для управления IT-заявками (тикетами) с реал-тайм чатом, SLA-контролем, ролевой моделью, AI-ассистентом, мониторингом и PDF-отчётами.
+> Полнофункциональная веб-платформа для управления IT-заявками (тикетами) с реал-тайм чатом, SLA-контролем, ролевой моделью, мультиязычным интерфейсом, базой знаний RU/EN/KK, AI/RAG-ассистентом, мониторингом и PDF-отчётами.
 
 Проект состоит из Express/Prisma/Socket.IO бэкенда, React + Vite SPA фронтенда и PostgreSQL. Всё поднимается одной командой через Docker Compose.
 
@@ -10,10 +10,11 @@
 
 | Слой | Технологии |
 |---|---|
-| **Frontend** | React 18, TypeScript, Vite 5, React Router 6, Zustand, Tailwind CSS v3, shadcn/ui, Recharts, Socket.IO client, sonner, lucide-react |
+| **Frontend** | React 18, TypeScript, Vite 5, React Router 6, Zustand, Tailwind CSS v3, shadcn/ui, Recharts, Socket.IO client, sonner, lucide-react, i18next, react-i18next |
 | **Backend** | Node 20, Express 4, TypeScript, Prisma 5, Socket.IO, Zod, JWT, bcrypt, Multer, Helmet, OpenAI SDK, pdf-lib, prom-client |
 | **Database** | PostgreSQL 17 |
-| **AI** | Groq (llama-3.3-70b-versatile), OpenAI-compatible SDK, RAG по базе знаний |
+| **i18n** | RU / EN / KK, translation JSON, browser language detector, localStorage, Intl.DateTimeFormat |
+| **AI** | OpenAI-compatible SDK, RAG по мультиязычной базе знаний, IT-support routing, controlled fallbacks |
 | **Runtime** | Docker Compose (6 сервисов) |
 | **Typography** | **Literata** (serif, editorial), **Geist Sans / Geist Mono** |
 
@@ -87,8 +88,9 @@ aitudesk/
 ├── backend/
 │   ├── prisma/
 │   │   ├── schema.prisma    # User, Ticket, TicketMessage, Attachment,
-│   │   │                    # Rating, Notification, KnowledgeArticle, SlaPolicy
-│   │   └── seed.ts          # Seed: юзеры, агенты, тикеты, статьи
+│   │   │                    # Rating, Notification, KnowledgeArticle,
+│   │   │                    # KnowledgeArticleTranslation, SlaPolicy
+│   │   └── seed.ts          # Idempotent seed: юзеры, агенты, KB RU/EN/KK
 │   ├── src/
 │   │   ├── routes/          # auth, users, tickets, messages,
 │   │   │                    # knowledge, notifications, dashboard,
@@ -129,11 +131,13 @@ aitudesk/
 │   │   │   ├── app-sidebar.tsx / app-topbar.tsx / brand.tsx
 │   │   │   └── tickets/, notifications/  (legacy stubs)
 │   │   ├── store/            # authStore, notifStore, themeStore, toastStore
-│   │   ├── lib/              # mappers (лейблы RU, цвета, даты), utils
+│   │   ├── i18n/             # i18next init + locales ru/en/kk
+│   │   ├── lib/              # mappers (translation keys), locale, даты, utils
 │   │   ├── api/axios.ts      # interceptor + refresh flow
 │   │   ├── socket/socket.ts  # connect / rooms / typing
 │   │   ├── layouts/          # AppLayout, AuthLayout
 │   │   └── App.tsx           # Роуты (+ ProtectedRoute по ролям)
+│   ├── scripts/              # check-i18n.mjs
 │   ├── index.html
 │   ├── nginx.conf            # SPA + proxy /api → backend, /socket.io WS
 │   └── Dockerfile
@@ -221,9 +225,56 @@ NEW ──▶ IN_PROGRESS ──▶ WAITING ──▶ RESOLVED ──▶ CLOSED
 | GET | `/api/dashboard/tickets-by-day` | 14-дневный тренд |
 | GET | `/api/dashboard/by-category` | Распределение по категориям |
 | GET | `/api/dashboard/agents` (ADMIN) | Топ агентов |
-| POST | `/api/ai/chat` | RAG AI-ассистент (Groq) |
+| POST | `/api/ai/chat` | AI/RAG-ассистент IT-поддержки |
 | GET | `/api/reports/monthly?month=YYYY-MM` | PDF-отчёт за месяц |
 | GET | `/metrics` | Prometheus метрики |
+
+---
+
+## Мультиязычность интерфейса
+
+Frontend поддерживает три языка:
+
+| Код | Язык | Intl locale |
+|---|---|---|
+| `ru` | Русский | `ru-RU` |
+| `en` | English | `en-US` |
+| `kk` | Қазақша | `kk-KZ` |
+
+Архитектура:
+
+- `frontend/src/i18n/index.ts` — инициализация i18next, fallback `ru`, detection/persistence через localStorage.
+- `frontend/src/i18n/locales/ru.json`, `en.json`, `kk.json` — словари интерфейса.
+- `frontend/scripts/check-i18n.mjs` — проверка, что структуры ключей во всех языках совпадают.
+- `frontend/src/lib/locale.ts` — нормализация языка и выбор locale для дат.
+- `frontend/src/lib/mappers.ts` — translation keys для статусов, приоритетов, категорий, ролей и notification types.
+
+Переводится только UI: меню, кнопки, формы, placeholders, toast-уведомления, empty states, фильтры, статусы, приоритеты, категории, графики, dashboard, auth, profile/admin, notifications, tickets и KB UI.
+
+Пользовательский контент не переводится автоматически: subject/description тикетов, чат, internal notes, rating comments, filenames, имена и email. Knowledge Base — исключение: это официальный контент приложения, поэтому статьи имеют сохранённые версии RU/EN/KK в БД.
+
+Проверка переводов:
+
+```bash
+cd frontend
+npm run i18n:check
+```
+
+---
+
+## Мультиязычная база знаний
+
+KB хранит официальный контент приложения на трёх языках.
+
+Prisma-модели:
+
+- `KnowledgeArticle` — общие поля статьи: категория, теги, публикация, просмотры, timestamps.
+- `KnowledgeArticleTranslation` — `locale`, `title`, `content`, `slug` для `ru/en/kk`.
+- `KnowledgeLocale` — enum `ru | en | kk`.
+
+Backend API выбирает язык через `?lang=ru|en|kk` или `Accept-Language`. Если перевода нет, fallback — русский. Список статей возвращает локализованные `title/excerpt`, detail page возвращает локализованные `title/content`. Admin editor позволяет редактировать версии RU / EN / KK.
+
+Seed создаёт базовые KB articles через idempotent upsert и не удаляет пользовательские тикеты, сообщения, оценки или существующие KB-статьи при обычном запуске backend.
 
 ---
 
@@ -244,12 +295,19 @@ PGADMIN_PASSWORD=pgadmin_secret_2024
 
 ```env
 # AI Assistant — любой OpenAI-совместимый провайдер
-AI_API_KEY=your_groq_api_key_here
+AI_API_KEY=your_provider_api_key_here
 AI_BASE_URL=https://api.groq.com/openai/v1
 AI_MODEL=llama-3.3-70b-versatile
 ```
 
 Поддерживаются Groq, Google Gemini, OpenRouter, NVIDIA, OpenAI и любой другой провайдер с OpenAI-совместимым API — достаточно поменять три переменные.
+
+Пример для OpenRouter:
+
+```env
+AI_BASE_URL=https://openrouter.ai/api/v1
+AI_MODEL=openrouter/auto
+```
 
 Frontend при сборке получает `VITE_API_URL=/api` и `VITE_SOCKET_URL=""` (same-origin через Nginx).
 
@@ -322,13 +380,15 @@ npm run dev             # :5173 (Vite)
 
 ## Что внутри фронтенда
 
+- **i18n** — полный UI на RU/EN/KK, компактный language switcher в topbar, сохранение языка в localStorage, проверка структуры ключей.
 - **Editorial design** — Literata для заголовков, Geist Mono для чисел/ID, тонкие hairlines, § нумерация блоков.
 - **DashboardPage** — 4 KPI-карточки со спарклайнами, линейный график за 14 дней, donut по категориям, лента свежих тикетов, топ агентов, блок KB, сводка SLA.
 - **TicketListPage** — статус-табы с счётчиками, фильтры (приоритет/категория), серверный поиск, таблица с бейджами и SLA-статусом.
 - **TicketDetailPage** — двухколоночный лэйаут: детали/описание слева, **sticky-чат справа** (публичные + INTERNAL-заметки, typing-индикатор, автообновление через socket), быстрые действия по роли/статусу, модуль оценки.
 - **CreateTicketPage** — форма + подсказки из KB (debounce-поиск), выбор приоритета плитками, вложения до 5 файлов.
-- **KB** — hero-поиск, плитки разделов, рекомендуемое, список; editorial article view; Markdown-редактор для ADMIN.
+- **KB** — hero-поиск, плитки разделов, рекомендуемое, список; editorial article view; multilingual editor для ADMIN с полями RU / EN / KK.
 - **NotificationsPage** — лента с иконкой по типу (`NEW_MESSAGE`, `TICKET_ASSIGNED`, `STATUS_CHANGED`, `TICKET_RATED`), «прочитать все», ссылка на тикет.
+- **AIAssistantWidget** — floating AI-чат IT-поддержки с RAG-источниками и controlled fallbacks вместо пустых ответов.
 
 ---
 
@@ -463,7 +523,7 @@ npm run test:coverage # однократный прогон + отчёт по п
 
 Файлы тестов: `backend/tests/*.test.ts`, конфигурация: `backend/vitest.config.ts`, setup: `backend/tests/setup.ts`.
 
-### Покрытие (104 теста, 11 модулей)
+### Покрытие (114 тестов, 12 модулей)
 
 | Модуль | Кол-во | Что тестируется |
 |---|---|---|
@@ -472,10 +532,10 @@ npm run test:coverage # однократный прогон + отчёт по п
 | `users` | 11 | Профиль, обновление, список (ADMIN), смена ролей (ADMIN), агенты, RBAC |
 | `messages` | 6 | Получение, создание, INTERNAL-запрет для USER, пустой контент, 404 |
 | `dashboard` | 10 | Статистика по роли (USER/AGENT/ADMIN), tickets-by-day, by-category, agents, RBAC |
-| `knowledge` | 12 | Список, поиск, фильтр по категории, viewCount++, CRUD (ADMIN), RBAC |
+| `knowledge` | 12+ | Список, поиск, фильтр по категории, локализация RU/EN/KK, viewCount++, CRUD (ADMIN), RBAC |
 | `notifications` | 4 | Список + unreadCount, read-all, read по id, 401 |
 | `reports` | 6 | PDF-генерация (%PDF magic bytes), content-type, content-disposition, валидация month, невалидный месяц |
-| `ai` | — | AI-ассистент тестируется e2e (зависит от внешнего API) |
+| `ai` | 11 | greeting, unclear, off-topic, RAG context, empty model reply, provider error, IT fallback для мыши/клавиатуры/аккаунта |
 | `metrics` | 8 | Инкремент счётчиков, observe гистограмм, формат Prometheus, метки method/route/status |
 | `sla` | 5 | calculateSlaDeadlines для CRITICAL/HIGH/MEDIUM/LOW, resolve > response |
 | `health` | 2 | /api/health → 200, /metrics → Prometheus text |
@@ -496,52 +556,74 @@ npm run test:coverage # однократный прогон + отчёт по п
 
 **AI-ассистент выдаёт 429** — исчерпан бесплатный лимит провайдера. Встроен retry с exponential backoff (до 3 попыток). Если ошибка повторяется — подождите минуту или переключитесь на другого провайдера (OpenRouter, Gemini).
 
+**AI-ассистент отвечает не по теме найденной статьёй** — проверьте `backend/src/routes/ai.ts`: routing и `shouldPreferGeneralItFallback()` отсекают нерелевантные KB sources для периферии/аккаунтов. Для новых классов IT-проблем добавьте support-term и fallback-тест в `backend/tests/ai.test.ts`.
+
+**Переключатель языка сбрасывается после reload** — проверьте localStorage key `i18nextLng` и инициализацию `frontend/src/i18n/index.ts`.
+
+**В одном языке пропал перевод** — выполните `cd frontend && npm run i18n:check`; скрипт сравнит структуры `ru/en/kk`.
+
 ---
 
-## AI-ассистент (RAG)
+## AI-ассистент (IT Support + RAG)
 
-Встроенный чат-бот на базе LLM с **Retrieval-Augmented Generation**.
+Встроенный AI-ассистент работает как помощник IT-поддержки колледжа. Он не отвечает на general knowledge/off-topic вопросы, но помогает не только по статьям KB: мышь, клавиатура, принтер, сеть, браузер, аккаунт, доступ, Office и другие IT-проблемы входят в допустимый scope.
 
 ### Архитектура
 
 ```
 Пользователь → POST /api/ai/chat
   ↓
-Extract keywords (стоп-слова RU/EN)
+Классификация сообщения:
+  greeting / unclear / off_topic / support_question
   ↓
-Prisma: поиск по KB (title, content, tags) → re-rank по частоте совпадений
+Для support_question:
+  Extract keywords → Prisma search по KB translations (title/content/tags)
   ↓
-Build system prompt + KB context (до 3 статей)
+Re-rank найденных статей + фильтрация нерелевантного контекста
   ↓
-Groq API (OpenAI-compatible SDK) → llama-3.3-70b-versatile
+Build system prompt + локализованный KB context (если он подходит)
   ↓
-Ответ + список источников (id, title, category)
+OpenAI-compatible provider
+  ↓
+Нормализация ответа:
+  empty/"—"/"__"/null → controlled fallback по ситуации
 ```
 
-### Возможности
+### Routing сообщений
 
-- **Разговорный режим** — здоровается, отвечает на общие вопросы, ведёт диалог
-- **RAG** — для технических вопросов подтягивает релевантные статьи из базы знаний
-- **История** — принимает до 20 сообщений контекста (`history`)
-- **Retry с backoff** — при 429/5xx автоматически повторяет запрос (до 3 раз, 1s → 2s → 4s)
-- **Провайдер-агностик** — работает с любым OpenAI-совместимым API (Groq, Gemini, OpenRouter, OpenAI)
+| Тип | Примеры | Поведение |
+|---|---|---|
+| `greeting` | `привет`, `спасибо`, `поможешь?` | Дружелюбный ответ без RAG |
+| `unclear` | `ошибка`, `не работает`, `не могу` | Уточняющий вопрос |
+| `support_question` | `как создать заявку`, `не могу зайти в аккаунт`, `клавиатура не работает` | RAG + практические IT-шаги |
+| `off_topic` | история, политика, математика, код, шутки, general knowledge | Вежливый отказ |
+
+### Защита от плохих ответов модели
+
+Если provider возвращает пустую строку, `—`, `_`, `__`, `null`, `undefined` или падает с 401/429/5xx, пользователь не видит технический мусор. Backend возвращает controlled fallback:
+
+- по KB-контексту, если статья релевантна;
+- по общей IT-диагностике, если это вопрос про устройство/аккаунт/браузер/сеть;
+- safe error message, если AI-сервис недоступен.
+
+Реальные ошибки provider'а логируются на backend, но секреты и raw error details не отправляются на frontend.
 
 ### Смена провайдера
 
 В `backend/.env`:
 
 ```env
-# Groq (по умолчанию)
+# Groq
 AI_BASE_URL=https://api.groq.com/openai/v1
 AI_MODEL=llama-3.3-70b-versatile
 
-# Google Gemini
-# AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-# AI_MODEL=gemini-2.0-flash
-
 # OpenRouter
 # AI_BASE_URL=https://openrouter.ai/api/v1
-# AI_MODEL=google/gemini-2.0-flash-exp:free
+# AI_MODEL=openrouter/auto
+
+# Google Gemini OpenAI-compatible endpoint
+# AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+# AI_MODEL=gemini-2.0-flash
 ```
 
 ---

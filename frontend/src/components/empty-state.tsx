@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ export function EmptyState({
   className,
   compact = false,
 }: EmptyStateProps) {
+  const { t } = useTranslation();
   const actionBtn = action ? (
     action.href ? (
       <Button asChild className="mt-6">
@@ -46,7 +48,7 @@ export function EmptyState({
     >
       <div className="inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
         <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
-        <span>Пусто</span>
+        <span>{t('common.empty')}</span>
       </div>
       <h3 className="mt-5 font-serif text-[22px] leading-[1.15] tracking-[-0.01em] text-balance">
         {title}

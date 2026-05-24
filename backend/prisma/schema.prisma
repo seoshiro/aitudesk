@@ -56,6 +56,12 @@ enum NotificationType {
   TICKET_REOPENED
 }
 
+enum KnowledgeLocale {
+  ru
+  en
+  kk
+}
+
 // ─── Models ────────────────────────────────────────────────────────────────
 
 model User {
@@ -174,6 +180,7 @@ model SlaPolicy {
 
 model KnowledgeArticle {
   id         String         @id @default(uuid())
+  // Legacy fallback fields kept to preserve existing articles during migration.
   title      String
   content    String
   category   TicketCategory
@@ -183,8 +190,25 @@ model KnowledgeArticle {
   viewCount  Int            @default(0)
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
+  translations KnowledgeArticleTranslation[]
 
   @@map("knowledge_articles")
+}
+
+model KnowledgeArticleTranslation {
+  id        String          @id @default(uuid())
+  articleId String
+  article   KnowledgeArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  locale    KnowledgeLocale
+  title     String
+  content   String
+  slug      String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([articleId, locale])
+  @@index([locale])
+  @@map("knowledge_article_translations")
 }
 
 model Notification {

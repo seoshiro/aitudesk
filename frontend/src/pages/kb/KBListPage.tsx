@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowUpRight,
   BookOpen,
@@ -14,7 +15,8 @@ import { useAuthStore } from '../../store/authStore';
 import { PageHeader } from '../../components/page-header';
 import { EmptyState } from '../../components/empty-state';
 import { Button } from '../../components/ui/button';
-import { categoryLabels } from '../../lib/mappers';
+import { getCategoryLabelKey } from '../../lib/mappers';
+import { formatCount, normalizeLanguage } from '../../lib/locale';
 import { cn } from '../../lib/utils';
 
 const CATEGORIES: TicketCategory[] = ['HARDWARE', 'SOFTWARE', 'NETWORK', 'OTHER'];
@@ -39,6 +41,7 @@ function stripMarkdown(text: string): string {
 }
 
 export default function KBListPage() {
+  const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user)!;
   const [articles, setArticles] = useState<KnowledgeArticle[]>([]);
   const [total, setTotal] = useState(0);
@@ -46,7 +49,7 @@ export default function KBListPage() {
   const [category, setCategory] = useState<TicketCategory | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams({ limit: '50' });
+    const params = new URLSearchParams({ limit: '50', lang: normalizeLanguage(i18n.language) });
     if (query) params.set('search', query);
     if (category) params.set('category', category);
     void api
@@ -56,7 +59,7 @@ export default function KBListPage() {
         setTotal(r.data.total);
       })
       .catch(() => {});
-  }, [query, category]);
+  }, [query, category, i18n.language]);
 
   const categoryCounts = useMemo(() => {
     const map = new Map<TicketCategory, number>();
@@ -69,14 +72,14 @@ export default function KBListPage() {
   return (
     <div className="flex flex-col gap-8 max-w-[1480px] mx-auto">
       <PageHeader
-        title="База знаний"
-        description="Статьи, инструкции и регламенты IT-поддержки колледжа AITU."
+        title={t('kb.list.title')}
+        description={t('kb.list.description')}
       >
         {user.role === 'ADMIN' && (
           <Button asChild>
             <Link to="/kb/create">
               <Plus className="h-4 w-4 mr-1.5" />
-              Новая статья
+              {t('kb.list.newArticle')}
             </Link>
           </Button>
         )}
@@ -88,32 +91,32 @@ export default function KBListPage() {
         <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-5 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1 text-xs text-muted-foreground">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
-            <span>{total} статей</span>
+            <span>{t('kb.list.articleCount', { count: total })}</span>
           </div>
           <h2 className="font-serif text-balance text-3xl tracking-[-0.01em] md:text-4xl leading-tight">
-            Чем мы можем помочь?
+            {t('kb.list.helpTitle')}
           </h2>
           <p className="text-pretty text-sm text-muted-foreground md:text-base">
-            Найдите ответ в базе знаний — от подключения Wi-Fi до настройки VPN и сброса пароля.
+            {t('kb.list.helpDescription')}
           </p>
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
-              placeholder="Например: «принтер HP», «VPN на Mac» или «сброс пароля»"
+              placeholder={t('kb.list.searchPlaceholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="h-12 w-full rounded-md border border-border bg-background pl-11 pr-3 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-            <span>Популярное:</span>
-            {['Wi-Fi', 'Принтер', 'VPN', 'Сеть'].map((t) => (
+            <span>{t('kb.list.popular')}</span>
+            {(t('kb.list.popularTerms', { returnObjects: true }) as string[]).map((term) => (
               <button
-                key={t}
-                onClick={() => setQuery(t)}
+                key={term}
+                onClick={() => setQuery(term)}
                 className="rounded-full border border-border bg-muted/40 px-3 py-1 transition hover:border-primary/40 hover:text-foreground"
               >
-                {t}
+                {term}
               </button>
             ))}
           </div>
@@ -123,13 +126,13 @@ export default function KBListPage() {
       {/* Categories */}
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-serif text-xl tracking-[-0.01em]">Разделы</h3>
+          <h3 className="font-serif text-xl tracking-[-0.01em]">{t('kb.list.sections')}</h3>
           {category && (
             <button
               onClick={() => setCategory(null)}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
-              Показать все
+              {t('common.showAll')}
             </button>
           )}
         </div>
@@ -158,8 +161,8 @@ export default function KBListPage() {
                   <BookOpen className="h-4 w-4" />
                 </div>
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium">{categoryLabels[cat.name]}</span>
-                  <span className="text-xs text-muted-foreground">{cat.count} статей</span>
+                  <span className="text-sm font-medium">{t(getCategoryLabelKey(cat.name))}</span>
+                  <span className="text-xs text-muted-foreground">{t('kb.list.articleCount', { count: cat.count })}</span>
                 </div>
               </button>
             );
@@ -170,7 +173,7 @@ export default function KBListPage() {
       {/* Featured */}
       {!query && !category && featured.length > 0 && (
         <section className="flex flex-col gap-4">
-          <h3 className="font-serif text-xl tracking-[-0.01em]">Читают чаще всего</h3>
+          <h3 className="font-serif text-xl tracking-[-0.01em]">{t('kb.list.mostRead')}</h3>
           <div className="grid gap-4 md:grid-cols-3">
             {featured.map((a) => (
               <Link
@@ -181,7 +184,7 @@ export default function KBListPage() {
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
                 <div className="flex items-center gap-2">
                   <span className="rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">
-                    {categoryLabels[a.category]}
+                    {t(getCategoryLabelKey(a.category))}
                   </span>
                   <ArrowUpRight className="ml-auto h-4 w-4 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
                 </div>
@@ -194,7 +197,7 @@ export default function KBListPage() {
                 <div className="mt-5 flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5">
                     <Eye className="h-3.5 w-3.5" />
-                    {a.viewCount.toLocaleString('ru-RU')}
+                    {formatCount(a.viewCount, i18n.language)}
                   </span>
                 </div>
               </Link>
@@ -207,20 +210,20 @@ export default function KBListPage() {
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h3 className="font-serif text-xl tracking-[-0.01em]">
-            {category ? categoryLabels[category] : query ? `Результаты: ${articles.length}` : 'Все статьи'}
+            {category ? t(getCategoryLabelKey(category)) : query ? t('kb.list.results', { count: articles.length }) : t('kb.list.allArticles')}
           </h3>
           <span className="text-xs text-muted-foreground">
-            Всего {articles.length} из {total}
+            {t('kb.list.total', { shown: articles.length, total })}
           </span>
         </div>
 
         {articles.length === 0 ? (
           <EmptyState
             icon={Search}
-            title="Ничего не найдено"
-            description="Попробуйте изменить формулировку или выбрать другой раздел."
+            title={t('kb.list.notFoundTitle')}
+            description={t('kb.list.notFoundDescription')}
             action={{
-              label: 'Сбросить фильтры',
+              label: t('kb.list.resetFilters'),
               onClick: () => {
                 setQuery('');
                 setCategory(null);
@@ -237,7 +240,7 @@ export default function KBListPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {categoryLabels[a.category]}
+                    {t(getCategoryLabelKey(a.category))}
                   </span>
                   <ArrowUpRight className="h-4 w-4 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
                 </div>
@@ -250,7 +253,7 @@ export default function KBListPage() {
                 <div className="mt-auto flex items-center gap-3 border-t border-border pt-3 text-xs text-muted-foreground">
                   <span className="ml-auto flex items-center gap-1.5">
                     <Eye className="h-3.5 w-3.5" />
-                    {a.viewCount.toLocaleString('ru-RU')}
+                    {formatCount(a.viewCount, i18n.language)}
                   </span>
                 </div>
               </Link>
@@ -261,4 +264,3 @@ export default function KBListPage() {
     </div>
   );
 }
-

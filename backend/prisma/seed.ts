@@ -1,4 +1,4 @@
-import { PrismaClient, Role, TicketCategory, Priority, TicketStatus, MessageType } from '@prisma/client';
+import { PrismaClient, Role, TicketCategory, Priority, TicketStatus, MessageType, KnowledgeLocale } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -7,15 +7,121 @@ const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';
 const AGENT_PASSWORD = process.env.SEED_AGENT_PASSWORD ?? 'Agent123!';
 const USER_PASSWORD = process.env.SEED_USER_PASSWORD ?? 'User123!';
 
+const seedTitleTranslations: Record<string, { en: string; kk: string }> = {
+  'Как сбросить пароль учётной записи': {
+    en: 'How to reset an account password',
+    kk: 'Есептік жазба құпиясөзін қалай қалпына келтіруге болады',
+  },
+  'Установка Microsoft Office 365': {
+    en: 'Installing Microsoft Office 365',
+    kk: 'Microsoft Office 365 орнату',
+  },
+  'Outlook не получает письма — что делать': {
+    en: 'Outlook is not receiving mail',
+    kk: 'Outlook хаттарды қабылдамаса не істеу керек',
+  },
+  'Как настроить почту на iPhone и Android': {
+    en: 'Setting up email on iPhone and Android',
+    kk: 'iPhone және Android құрылғыларында поштаны баптау',
+  },
+  'Удаление вирусов и рекламного ПО в браузере': {
+    en: 'Removing browser viruses and adware',
+    kk: 'Браузердегі вирус пен жарнамалық бағдарламаны жою',
+  },
+  'Как защититься от фишинга и подозрительных писем': {
+    en: 'Protecting yourself from phishing and suspicious emails',
+    kk: 'Фишингтен және күмәнді хаттардан қорғану',
+  },
+  'Электронный журнал Kundelik не загружается': {
+    en: 'Kundelik electronic journal does not load',
+    kk: 'Kundelik электрондық журналы жүктелмейді',
+  },
+  'Установка и настройка 1С:Бухгалтерия': {
+    en: 'Installing and configuring 1C Accounting',
+    kk: '1С:Бухгалтерия орнату және баптау',
+  },
+  'Лицензии на специализированный софт (AutoCAD, MATLAB, Adobe)': {
+    en: 'Licenses for specialized software: AutoCAD, MATLAB, Adobe',
+    kk: 'Арнайы бағдарламалар лицензиялары: AutoCAD, MATLAB, Adobe',
+  },
+  'Office 365 не запускается после Windows Update': {
+    en: 'Office 365 does not start after Windows Update',
+    kk: 'Windows Update кейін Office 365 іске қосылмайды',
+  },
+  'Принтер не печатает — пошаговое решение': {
+    en: 'Printer is not printing: step-by-step fix',
+    kk: 'Принтер басып шығармайды: қадамдық шешім',
+  },
+  'Как подключиться к проектору': {
+    en: 'How to connect to a projector',
+    kk: 'Проекторға қалай қосылуға болады',
+  },
+  'Настройка Wi-Fi на ноутбуке': {
+    en: 'Configuring Wi-Fi on a laptop',
+    kk: 'Ноутбукте Wi-Fi баптау',
+  },
+  'Нет доступа к сетевой папке': {
+    en: 'No access to a network folder',
+    kk: 'Желілік бумаға қолжетімділік жоқ',
+  },
+  'Как получить VPN-доступ для удалённой работы': {
+    en: 'How to request VPN access for remote work',
+    kk: 'Қашықтан жұмыс үшін VPN қолжетімділігін алу',
+  },
+  'Медленный интернет — диагностика': {
+    en: 'Slow internet: diagnostics',
+    kk: 'Баяу интернет: диагностика',
+  },
+  'Как создать заявку в Service Desk': {
+    en: 'How to create a Service Desk ticket',
+    kk: 'Service Desk өтінімін қалай құруға болады',
+  },
+  'Резервное копирование рабочих файлов': {
+    en: 'Backing up work files',
+    kk: 'Жұмыс файлдарының резервтік көшірмесін жасау',
+  },
+};
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 80);
+}
+
+function englishContent(title: string, category: TicketCategory, tags: string[]): string {
+  return `## ${title}
+
+This official AituDesk knowledge-base article explains a common ${category.toLowerCase()} support scenario for the college.
+
+1. Check the basic conditions first: power, network connection, account access, or the exact error text.
+2. Restart the affected application or device if it is safe to do so.
+3. Record the room number, device model, user account, screenshots, and any recent changes.
+4. If the issue is not resolved, create a Service Desk ticket and choose the ${category} category.
+
+Useful keywords: ${tags.join(', ')}.`;
+}
+
+function kazakhContent(title: string, category: TicketCategory, tags: string[]): string {
+  return `## ${title}
+
+Бұл AituDesk базасындағы ресми мақала колледждегі ${category} санатына қатысты жиі кездесетін жағдайды түсіндіреді.
+
+1. Алдымен негізгі шарттарды тексеріңіз: қуат көзі, желі қосылымы, есептік жазба немесе қате мәтіні.
+2. Қауіпсіз болса, қолданбаны немесе құрылғыны қайта іске қосыңыз.
+3. Аудитория нөмірін, құрылғы моделін, пайдаланушы аккаунтын, скриншоттарды және соңғы өзгерістерді жазып алыңыз.
+4. Мәселе шешілмесе, Service Desk өтінімін құрып, ${category} санатын таңдаңыз.
+
+Пайдалы кілтсөздер: ${tags.join(', ')}.`;
+}
+
 async function main(): Promise<void> {
   console.log('🌱 Starting database seed...');
 
-  // ── Clean up previous seed data ──────────────────────────────────────
-  await prisma.rating.deleteMany();
-  await prisma.ticketMessage.deleteMany();
-  await prisma.ticket.deleteMany();
-  await prisma.knowledgeArticle.deleteMany();
-  console.log('🧹 Cleaned previous data');
+  // Seed must be additive/idempotent: never delete user tickets, messages,
+  // ratings, or admin-authored KB articles during normal backend startup.
   // ── SLA Policies ────────────────────────────────────────────────────────
   await prisma.slaPolicy.upsert({ where: { priority: Priority.CRITICAL }, update: {}, create: { priority: Priority.CRITICAL, responseHours: 2, resolutionHours: 4 } });
   await prisma.slaPolicy.upsert({ where: { priority: Priority.HIGH }, update: {}, create: { priority: Priority.HIGH, responseHours: 4, resolutionHours: 8 } });
@@ -220,21 +326,15 @@ async function main(): Promise<void> {
   ];
 
   for (const article of kbArticles) {
-    const slug = article.title
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s-]/gu, '')
-      .trim()
-      .replace(/\s+/g, '-')
-      .slice(0, 60);
+    const slug = slugify(article.title).slice(0, 60);
     const id = `seed-kb-${slug}`;
-    await prisma.knowledgeArticle.upsert({
+    const translatedTitle = seedTitleTranslations[article.title] ?? {
+      en: `AituDesk guide: ${article.tags.slice(0, 2).join(', ') || article.category.toLowerCase()}`,
+      kk: `AituDesk нұсқаулығы: ${article.tags.slice(0, 2).join(', ') || article.category}`,
+    };
+    const storedArticle = await prisma.knowledgeArticle.upsert({
       where: { id },
-      update: {
-        title: article.title,
-        content: article.content,
-        category: article.category,
-        tags: article.tags,
-      },
+      update: {},
       create: {
         id,
         title: article.title,
@@ -245,6 +345,39 @@ async function main(): Promise<void> {
         published: true,
       },
     });
+
+    const translations = [
+      { locale: KnowledgeLocale.ru, title: storedArticle.title, content: storedArticle.content },
+      {
+        locale: KnowledgeLocale.en,
+        title: translatedTitle.en,
+        content: englishContent(translatedTitle.en, article.category, article.tags),
+      },
+      {
+        locale: KnowledgeLocale.kk,
+        title: translatedTitle.kk,
+        content: kazakhContent(translatedTitle.kk, article.category, article.tags),
+      },
+    ];
+
+    for (const translation of translations) {
+      await prisma.knowledgeArticleTranslation.upsert({
+        where: {
+          articleId_locale: {
+            articleId: storedArticle.id,
+            locale: translation.locale,
+          },
+        },
+        update: {},
+        create: {
+          articleId: storedArticle.id,
+          locale: translation.locale,
+          title: translation.title,
+          content: translation.content,
+          slug: slugify(translation.title),
+        },
+      });
+    }
   }
   console.log(`✅ ${kbArticles.length} knowledge articles created`);
 
@@ -278,64 +411,68 @@ async function main(): Promise<void> {
     { subject: 'Закупка лицензий MATLAB R2025a на 30 мест', description: 'Кафедра "Компьютерные технологии" запрашивает Academic License. Бюджет согласован с проректором, нужна закупка.', category: TicketCategory.SOFTWARE, priority: Priority.MEDIUM, status: TicketStatus.WAITING, creatorIdx: 4, assigneeIdx: 1, hoursAgo: 48 },
   ];
 
-  for (let idx = 0; idx < ticketSpecs.length; idx++) {
-    const spec = ticketSpecs[idx];
-    if (!spec) continue;
-    const createdAt = new Date(now.getTime() - spec.hoursAgo * 60 * 60 * 1000);
-    const sla = spec.priority === Priority.CRITICAL ? { r: 2, res: 4 }
-      : spec.priority === Priority.HIGH ? { r: 4, res: 8 }
-      : spec.priority === Priority.MEDIUM ? { r: 8, res: 24 }
-      : { r: 24, res: 72 };
+  const existingTickets = await prisma.ticket.count();
+  if (existingTickets === 0) {
+    for (let idx = 0; idx < ticketSpecs.length; idx++) {
+      const spec = ticketSpecs[idx];
+      if (!spec) continue;
+      const createdAt = new Date(now.getTime() - spec.hoursAgo * 60 * 60 * 1000);
+      const sla = spec.priority === Priority.CRITICAL ? { r: 2, res: 4 }
+        : spec.priority === Priority.HIGH ? { r: 4, res: 8 }
+        : spec.priority === Priority.MEDIUM ? { r: 8, res: 24 }
+        : { r: 24, res: 72 };
 
-    const assignee = spec.assigneeIdx !== undefined ? agents[spec.assigneeIdx] : undefined;
+      const assignee = spec.assigneeIdx !== undefined ? agents[spec.assigneeIdx] : undefined;
 
-    const ticket = await prisma.ticket.create({
-      data: {
-        subject: spec.subject,
-        description: spec.description,
-        category: spec.category,
-        priority: spec.priority,
-        status: spec.status,
-        creatorId: users[spec.creatorIdx]?.id ?? users[0]!.id,
-        assigneeId: assignee?.id,
-        slaDeadlineResponse: new Date(createdAt.getTime() + sla.r * 60 * 60 * 1000),
-        slaDeadlineResolve: new Date(createdAt.getTime() + sla.res * 60 * 60 * 1000),
-        slaBreached: ([TicketStatus.RESOLVED, TicketStatus.CLOSED] as TicketStatus[]).includes(spec.status) ? false : new Date() > new Date(createdAt.getTime() + sla.res * 60 * 60 * 1000),
-        firstResponseAt: assignee ? new Date(createdAt.getTime() + 30 * 60 * 1000) : undefined,
-        resolvedAt: ([TicketStatus.RESOLVED, TicketStatus.CLOSED] as TicketStatus[]).includes(spec.status) ? new Date(createdAt.getTime() + sla.res * 0.8 * 60 * 60 * 1000) : undefined,
-        createdAt,
-        updatedAt: createdAt,
-      },
-    });
-
-    // Add a sample message to each ticket
-    if (assignee) {
-      await prisma.ticketMessage.create({
+      const ticket = await prisma.ticket.create({
         data: {
-          ticketId: ticket.id,
-          authorId: assignee.id,
-          content: 'Добрый день! Принял вашу заявку в работу. Разберусь в течение ближайшего времени.',
-          type: MessageType.PUBLIC,
-          createdAt: new Date(createdAt.getTime() + 30 * 60 * 1000),
-          updatedAt: new Date(createdAt.getTime() + 30 * 60 * 1000),
+          subject: spec.subject,
+          description: spec.description,
+          category: spec.category,
+          priority: spec.priority,
+          status: spec.status,
+          creatorId: users[spec.creatorIdx]?.id ?? users[0]!.id,
+          assigneeId: assignee?.id,
+          slaDeadlineResponse: new Date(createdAt.getTime() + sla.r * 60 * 60 * 1000),
+          slaDeadlineResolve: new Date(createdAt.getTime() + sla.res * 60 * 60 * 1000),
+          slaBreached: ([TicketStatus.RESOLVED, TicketStatus.CLOSED] as TicketStatus[]).includes(spec.status) ? false : new Date() > new Date(createdAt.getTime() + sla.res * 60 * 60 * 1000),
+          firstResponseAt: assignee ? new Date(createdAt.getTime() + 30 * 60 * 1000) : undefined,
+          resolvedAt: ([TicketStatus.RESOLVED, TicketStatus.CLOSED] as TicketStatus[]).includes(spec.status) ? new Date(createdAt.getTime() + sla.res * 0.8 * 60 * 60 * 1000) : undefined,
+          createdAt,
+          updatedAt: createdAt,
         },
       });
-    }
 
-    // Add ratings for CLOSED tickets
-    if (spec.status === TicketStatus.CLOSED) {
-      await prisma.rating.create({
-        data: {
-          ticketId: ticket.id,
-          userId: users[spec.creatorIdx]?.id ?? users[0]!.id,
-          score: [4, 5, 5, 3, 5][idx % 5] ?? 5,
-          comment: idx % 2 === 0 ? 'Быстро решили проблему, спасибо!' : 'Всё хорошо, но немного долго.',
-        },
-      });
+      // Add a sample message to each ticket
+      if (assignee) {
+        await prisma.ticketMessage.create({
+          data: {
+            ticketId: ticket.id,
+            authorId: assignee.id,
+            content: 'Добрый день! Принял вашу заявку в работу. Разберусь в течение ближайшего времени.',
+            type: MessageType.PUBLIC,
+            createdAt: new Date(createdAt.getTime() + 30 * 60 * 1000),
+            updatedAt: new Date(createdAt.getTime() + 30 * 60 * 1000),
+          },
+        });
+      }
+
+      // Add ratings for CLOSED tickets
+      if (spec.status === TicketStatus.CLOSED) {
+        await prisma.rating.create({
+          data: {
+            ticketId: ticket.id,
+            userId: users[spec.creatorIdx]?.id ?? users[0]!.id,
+            score: [4, 5, 5, 3, 5][idx % 5] ?? 5,
+            comment: idx % 2 === 0 ? 'Быстро решили проблему, спасибо!' : 'Всё хорошо, но немного долго.',
+          },
+        });
+      }
     }
+    console.log('✅ 20 tickets created with messages and ratings');
+  } else {
+    console.log(`↪️  Skipped demo tickets because ${existingTickets} tickets already exist`);
   }
-
-  console.log('✅ 20 tickets created with messages and ratings');
   console.log('🌱 Seed completed successfully!');
   console.log('');
   console.log('📋 Test accounts:');

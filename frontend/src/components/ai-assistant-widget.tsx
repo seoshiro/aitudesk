@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sparkles, Send, X, Loader2, BookOpen } from 'lucide-react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import { api } from '@/api/axios';
+import { normalizeLanguage } from '@/lib/locale';
 import { cn } from '@/lib/utils';
 
 interface ChatMessage {
@@ -12,20 +14,27 @@ interface ChatMessage {
 
 interface ChatResponse {
   reply: string;
+  reason?: 'answered' | 'greeting' | 'off_topic' | 'unclear' | 'no_context' | 'generation_error';
   sources?: { id: string; title: string; category: string }[];
 }
 
-const INITIAL_MESSAGE: ChatMessage = {
-  role: 'assistant',
-  content:
-    'Здравствуйте. Я ассистент AituDesk на базе ИИ. Отвечаю по статьям базы знаний колледжа. Задайте вопрос — например, «как подключить принтер» или «почему не работает Wi-Fi».',
-};
+const EMPTY_REPLY_RE = /^[-—–_.\s]+$/u;
+
+function normalizeAssistantReply(reply: unknown, fallback: string): string {
+  if (typeof reply !== 'string') return fallback;
+  const trimmed = reply.trim();
+  if (!trimmed || EMPTY_REPLY_RE.test(trimmed)) return fallback;
+  if (['null', 'undefined', 'nan'].includes(trimmed.toLowerCase())) return fallback;
+  return trimmed;
+}
 
 export function AIAssistantWidget() {
+  const { t, i18n } = useTranslation();
+  const initialMessage = (): ChatMessage => ({ role: 'assistant', content: t('assistant.initial') });
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [initialMessage()]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -34,6 +43,12 @@ export function AIAssistantWidget() {
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
+
+  useEffect(() => {
+    setMessages((prev) =>
+      prev.length === 1 && prev[0]?.role === 'assistant' ? [initialMessage()] : prev,
+    );
+  }, [i18n.language]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -60,13 +75,14 @@ export function AIAssistantWidget() {
       const resp = await api.post<ChatResponse>('/ai/chat', {
         message: text,
         history,
+        lang: normalizeLanguage(i18n.language),
       });
 
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: resp.data.reply || '—',
+          content: normalizeAssistantReply(resp.data.reply, t('assistant.error')),
           sources: resp.data.sources,
         },
       ]);
@@ -78,10 +94,7 @@ export function AIAssistantWidget() {
         ...prev,
         {
           role: 'assistant',
-          content:
-            detail?.detail ??
-            detail?.error ??
-            'Не удалось получить ответ от ИИ. Попробуйте позже или создайте заявку вручную.',
+          content: normalizeAssistantReply(detail?.error, t('assistant.error')),
         },
       ]);
     } finally {
@@ -97,7 +110,7 @@ export function AIAssistantWidget() {
   };
 
   const reset = () => {
-    setMessages([INITIAL_MESSAGE]);
+    setMessages([initialMessage()]);
     setInput('');
   };
 
@@ -114,10 +127,10 @@ export function AIAssistantWidget() {
             'hover:bg-foreground/90 transition-colors',
             'text-[12.5px] font-medium tracking-[0.01em]',
           )}
-          aria-label="Открыть ИИ-ассистент"
+          aria-label={t('assistant.open')}
         >
           <Sparkles className="h-4 w-4" strokeWidth={1.75} />
-          ИИ-ассистент
+          {t('assistant.title')}
         </button>
       )}
 
@@ -132,7 +145,7 @@ export function AIAssistantWidget() {
             'overflow-hidden',
           )}
           role="dialog"
-          aria-label="ИИ-ассистент AituDesk"
+          aria-label={t('assistant.dialogLabel')}
         >
           {/* Header — editorial masthead */}
           <header className="shrink-0 px-5 pt-4 pb-3 border-b border-border">
@@ -142,21 +155,21 @@ export function AIAssistantWidget() {
                   § AI · AituDesk
                 </div>
                 <h2 className="mt-1 font-serif text-[18px] leading-[1.15] tracking-[-0.01em]">
-                  Технический ассистент
+                  {t('assistant.technical')}
                 </h2>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={reset}
                   className="h-7 px-2 rounded text-[11px] uppercase tracking-[0.12em] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                  title="Очистить переписку"
+                  title={t('assistant.clear')}
                 >
-                  Сброс
+                  {t('assistant.reset')}
                 </button>
                 <button
                   onClick={() => setOpen(false)}
                   className="grid h-7 w-7 place-items-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                  aria-label="Закрыть"
+                  aria-label={t('assistant.close')}
                 >
                   <X className="h-4 w-4" strokeWidth={1.75} />
                 </button>
@@ -176,7 +189,7 @@ export function AIAssistantWidget() {
             {loading && (
               <div className="flex flex-col gap-2">
                 <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  Ассистент
+                  {t('assistant.assistant')}
                 </div>
                 <div className="space-y-1.5">
                   <div className="h-2 w-3/4 rounded bg-muted animate-pulse" />
@@ -197,7 +210,7 @@ export function AIAssistantWidget() {
                 onKeyDown={handleKey}
                 rows={1}
                 disabled={loading}
-                placeholder="Спросите о настройке, доступе, ошибке…"
+                placeholder={t('assistant.placeholder')}
                 className="flex-1 min-w-0 resize-none bg-transparent px-3 py-2.5 text-[13.5px] leading-[1.45] outline-none placeholder:text-muted-foreground max-h-32"
                 style={{ fontFamily: 'inherit' }}
               />
@@ -210,7 +223,7 @@ export function AIAssistantWidget() {
                   'disabled:opacity-40 disabled:cursor-not-allowed',
                   'hover:bg-foreground/90 transition-colors',
                 )}
-                aria-label="Отправить"
+                aria-label={t('assistant.send')}
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />
@@ -220,7 +233,7 @@ export function AIAssistantWidget() {
               </button>
             </div>
             <p className="mt-1.5 px-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-              Enter — отправить · Shift+Enter — новая строка
+              {t('assistant.hint')}
             </p>
           </div>
         </div>
@@ -230,12 +243,13 @@ export function AIAssistantWidget() {
 }
 
 function MessageBubble({ message, index }: { message: ChatMessage; index: number }) {
+  const { t } = useTranslation();
   const isUser = message.role === 'user';
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline gap-2">
         <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          {isUser ? 'Вы' : 'Ассистент'}
+          {isUser ? t('assistant.you') : t('assistant.assistant')}
         </span>
         <span className="font-mono text-[9.5px] text-muted-foreground/70">
           № {String(index + 1).padStart(2, '0')}
@@ -256,7 +270,7 @@ function MessageBubble({ message, index }: { message: ChatMessage; index: number
         <div className="mt-1 flex flex-wrap items-center gap-1.5 px-1">
           <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
             <BookOpen className="h-3 w-3" strokeWidth={1.75} />
-            Источники
+            {t('assistant.sources')}
           </span>
           {message.sources.map((s) => (
             <a

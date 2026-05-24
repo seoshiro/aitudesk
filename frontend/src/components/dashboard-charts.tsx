@@ -10,6 +10,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
+import { getCategoryLabelKey } from '@/lib/mappers';
+import { formatDate } from '@/lib/locale';
 
 // Editorial OKLCH palette, resolved to strings for Recharts.
 const INK = 'oklch(0.36 0.14 263)';
@@ -35,8 +38,9 @@ export interface TrendPoint {
 }
 
 export function TicketsLineChart({ data }: { data: TrendPoint[] }) {
+  const { t, i18n } = useTranslation();
   const chartData = data.map((p) => ({
-    date: new Date(p.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+    date: formatDate(p.date, i18n.language, { day: 'numeric', month: 'short' }),
     created: p.count,
   }));
   return (
@@ -69,7 +73,7 @@ export function TicketsLineChart({ data }: { data: TrendPoint[] }) {
           cursor={{ stroke: CAPTION, strokeWidth: 1, strokeDasharray: '2 4' }}
           contentStyle={tooltipStyle}
           labelStyle={{ color: CAPTION }}
-          formatter={(v: number) => [v, 'Создано']}
+          formatter={(v: number) => [v, t('dashboard.charts.created')]}
         />
         <Area
           type="monotone"
@@ -90,17 +94,11 @@ const CATEGORY_COLORS: Record<string, string> = {
   NETWORK: SAGE,
   OTHER: STONE,
 };
-const CATEGORY_LABELS: Record<string, string> = {
-  HARDWARE: 'Оборудование',
-  SOFTWARE: 'Программы',
-  NETWORK: 'Сеть',
-  OTHER: 'Другое',
-};
-
 export function CategoryDonut({ data }: { data: { category: string; count: number }[] }) {
+  const { t } = useTranslation();
   const total = data.reduce((s, d) => s + d.count, 0) || 1;
   const items = data.map((d) => ({
-    name: CATEGORY_LABELS[d.category] ?? d.category,
+    name: t(getCategoryLabelKey(d.category as never), { defaultValue: d.category }),
     value: Math.round((d.count / total) * 100),
     raw: d.count,
     fill: CATEGORY_COLORS[d.category] ?? BRICK,
@@ -128,7 +126,7 @@ export function CategoryDonut({ data }: { data: { category: string; count: numbe
           contentStyle={tooltipStyle}
           formatter={(v: number, _n: string, p: { payload?: { raw?: number } }) => [
             `${v}% (${p.payload?.raw ?? 0})`,
-            'Доля',
+            t('dashboard.charts.share'),
           ]}
         />
       </PieChart>

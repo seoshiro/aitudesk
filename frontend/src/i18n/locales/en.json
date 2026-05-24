@@ -1,0 +1,466 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "reset": "Reset",
+    "delete": "Delete",
+    "edit": "Edit",
+    "publish": "Publish",
+    "empty": "Empty",
+    "new": "New",
+    "all": "All",
+    "showAll": "Show all",
+    "backHome": "Back home",
+    "backToTickets": "Back to tickets",
+    "knowledgeBase": "Knowledge base",
+    "createTicket": "Create ticket",
+    "notAssigned": "Unassigned",
+    "email": "Email",
+    "fullName": "Full name",
+    "password": "Password",
+    "send": "Send",
+    "today": "Today",
+    "issue": "Issue",
+    "language": "Language",
+    "relative": {
+      "now": "now",
+      "past": {
+        "minute": "{{count}} min ago",
+        "hour": "{{count}} h ago",
+        "day": "{{count}} d ago"
+      },
+      "future": {
+        "minute": "in {{count}} min",
+        "hour": "in {{count}} h",
+        "day": "in {{count}} d"
+      }
+    }
+  },
+  "entities": {
+    "roles": {
+      "USER": "User",
+      "AGENT": "Support agent",
+      "ADMIN": "Administrator"
+    },
+    "statuses": {
+      "NEW": "New",
+      "IN_PROGRESS": "In progress",
+      "WAITING": "Waiting",
+      "RESOLVED": "Resolved",
+      "CLOSED": "Closed",
+      "REOPENED": "Reopened"
+    },
+    "priorities": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "CRITICAL": "Critical"
+    },
+    "categories": {
+      "HARDWARE": "Hardware",
+      "SOFTWARE": "Software",
+      "NETWORK": "Network",
+      "ACCESS": "Access",
+      "OTHER": "Other"
+    },
+    "notifications": {
+      "NEW_MESSAGE": "New message",
+      "TICKET_ASSIGNED": "Ticket assigned",
+      "STATUS_CHANGED": "Status changed",
+      "TICKET_RATED": "Ticket rated",
+      "SLA_BREACH": "SLA breach"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "tickets": "Tickets",
+    "newTicket": "Create ticket",
+    "kb": "Knowledge base",
+    "notifications": "Notifications",
+    "users": "Users",
+    "newArticle": "New article",
+    "profile": "Profile",
+    "main": "Main",
+    "admin": "Administration",
+    "account": "Account",
+    "itDept": "IT department",
+    "extension": "ext.",
+    "logout": "Log out",
+    "closeMenu": "Close menu"
+  },
+  "topbar": {
+    "menu": "Menu",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "logout": "Log out"
+  },
+  "auth": {
+    "login": {
+      "success": "Signed in",
+      "errors": {
+        "invalid": "Invalid email or password",
+        "format": "Check the email and password format",
+        "rateLimit": "Too many attempts. Wait a minute.",
+        "server": "Could not sign in. The server is not responding."
+      },
+      "heroEyebrow": "— Leading article",
+      "heroTitleBefore": "Order in tickets means ",
+      "heroTitleEm": "calm",
+      "heroTitleAfter": " at work.",
+      "heroText": "AituDesk keeps every college IT request in one place: tickets, conversations, knowledge base and SLA control without extra tools or inbox chaos.",
+      "statTickets": "tickets / mo.",
+      "statResolution": "avg. resolution, h",
+      "footer": "© 2026 AITU Engineering · Internal college system",
+      "eyebrow": "System sign-in",
+      "title": "Welcome back.",
+      "description": "Use your corporate AITU email. Access is synchronized with your account.",
+      "corporateEmail": "Corporate email",
+      "forgotPassword": "Forgot password?",
+      "passwordPlaceholder": "Enter password",
+      "hidePassword": "Hide password",
+      "showPassword": "Show password",
+      "remember": "Remember me on this device",
+      "submitting": "Signing in...",
+      "submit": "Sign in",
+      "or": "— or —",
+      "demoAccess": "Demo access",
+      "demo": {
+        "admin": "Admin",
+        "agent": "Agent",
+        "user": "User"
+      },
+      "noAccount": "No account yet?",
+      "register": "Register"
+    },
+    "register": {
+      "passwordTooShort": "Password must be at least 6 characters",
+      "success": "Welcome to AituDesk",
+      "errors": {
+        "emailExists": "This email is already registered",
+        "badRequest": "Check your name, email and password (min. 6 characters)",
+        "server": "Could not create the account. Try again later."
+      },
+      "masthead": "Registration · 2026",
+      "heroEyebrow": "— Invitation",
+      "heroTitleBefore": "One account for ",
+      "heroTitleEm": "the whole IT team",
+      "heroTitleAfter": ".",
+      "heroText": "Create an account with your corporate email to submit tickets, read the knowledge base and track requests in real time.",
+      "benefits": [
+        "One window for requests: printer, Wi-Fi, 1C, access.",
+        "Knowledge base with instructions for common issues.",
+        "Transparent SLA: status, owner and resolution deadline."
+      ],
+      "eyebrow": "Account creation",
+      "title": "Start with a few fields.",
+      "description": "Use the corporate email issued by the college so we can confirm your AITU affiliation.",
+      "passwordPlaceholder": "At least 6 characters",
+      "passwordRules": [
+        "At least 6 characters",
+        "Letters and numbers",
+        "Unique password",
+        "Do not share"
+      ],
+      "agreeBefore": "I agree to the",
+      "itPolicy": "IT regulations",
+      "agreeMiddle": "and",
+      "dataPolicy": "data processing policy",
+      "submitting": "Creating account...",
+      "submit": "Create account",
+      "hasAccount": "Already have an account?",
+      "login": "Sign in"
+    }
+  },
+  "dashboard": {
+    "userTitle": "Hello, {{name}}.",
+    "supportTitle": "Today in support",
+    "userDescription": "Your tickets, IT materials and a short SLA summary.",
+    "agentDescription": "Tickets assigned to you and the current shift workload.",
+    "adminDescription": "Operational overview of support and IT workload for the last day.",
+    "systems": "All systems:",
+    "systemsOk": "normal",
+    "report": {
+      "title": "Monthly report",
+      "download": "Download report",
+      "downloading": "Loading..."
+    },
+    "captions": {
+      "keyMetrics": "Key metrics",
+      "activity": "Activity",
+      "recent": "Recent",
+      "performance": "Performance"
+    },
+    "summary": "Daily summary",
+    "metrics": {
+      "total": "Total tickets",
+      "active": "Active",
+      "open": "Open",
+      "resolved": "Resolved",
+      "slaBreached": "SLA breaches",
+      "closed": "Closed",
+      "allTime": "all time",
+      "needReaction": "need attention",
+      "archive": "archive"
+    },
+    "flow": "Ticket flow",
+    "tickets14": "Tickets — 14 days",
+    "created": "Created",
+    "byDay": "by day",
+    "ticketCategories": "Ticket categories",
+    "whatBreaks": "What breaks",
+    "noData": "No data",
+    "recent": {
+      "user": "My recent tickets",
+      "agent": "Assigned to me",
+      "admin": "Fresh ticket feed",
+      "all": "All tickets",
+      "empty": "No tickets yet."
+    },
+    "topAgents": "Top agents",
+    "byResolved": "By resolved",
+    "quickActions": "Quick actions",
+    "whatCanDo": "What you can do",
+    "reportProblem": "Report a problem",
+    "openKb": "Open knowledge base",
+    "myTickets": "My tickets",
+    "fromKb": "From knowledge base",
+    "mostRead": "Most read",
+    "articleFallback": "Article",
+    "sla": {
+      "title": "SLA summary",
+      "resolvedTotal": "Resolved total",
+      "avgResolution": "Average resolution time",
+      "breaches": "SLA breaches",
+      "allTime": "All time",
+      "closedTickets": "For closed tickets",
+      "breachesCaption": "Tickets outside deadlines",
+      "hoursShort": "h"
+    },
+    "charts": {
+      "created": "Created",
+      "share": "Share"
+    }
+  },
+  "tickets": {
+    "list": {
+      "title": "Tickets",
+      "description": "All requests to college IT support",
+      "searchPlaceholder": "Search by number, subject or author...",
+      "priority": "Priority",
+      "anyPriority": "Any priority",
+      "category": "Category",
+      "allCategories": "All categories",
+      "loading": "Loading tickets...",
+      "emptyTitle": "No tickets yet",
+      "emptyDescription": "The first request will appear here as soon as it is created.",
+      "emptyAction": "Create first ticket",
+      "notFoundTitle": "Nothing found",
+      "notFoundDescription": "Try changing filters or resetting search.",
+      "resetFilters": "Reset filters",
+      "columns": {
+        "status": "Status",
+        "priority": "Priority",
+        "ticket": "Ticket",
+        "assignee": "Assignee",
+        "updated": "Updated"
+      },
+      "slaBreached": "Overdue",
+      "slaOk": "Within SLA",
+      "shown": "Shown",
+      "of": "of"
+    },
+    "create": {
+      "success": "Ticket created",
+      "error": "Could not create ticket",
+      "title": "New ticket",
+      "description": "Describe the issue in detail. Required fields are marked with an asterisk.",
+      "subject": "Title",
+      "subjectHint": "Briefly: what is not working",
+      "subjectPlaceholder": "Example: HP printer in room 305 does not print",
+      "kbSuggestion": "The answer may already be in the knowledge base",
+      "priorityDescriptions": {
+        "LOW": "Question that does not block work",
+        "MEDIUM": "Affects part of the staff",
+        "HIGH": "Blocks a task and needs attention today",
+        "CRITICAL": "A department cannot work"
+      },
+      "descriptionLabel": "Description",
+      "descriptionHint": "What you tried, the error, when it started",
+      "descriptionPlaceholder": "Describe the issue in detail:\n• What exactly is not working\n• What you have already tried\n• Which errors are displayed\n• Urgency (is there a deadline)",
+      "attachments": "Attachments",
+      "attachmentsHint": "Screenshots, photos, logs — up to 5 files, 10 MB",
+      "attachFile": "Attach a file or drag it here",
+      "submitHint": "After submission you will receive a notification with the ticket number",
+      "submitting": "Submitting...",
+      "submit": "Submit ticket",
+      "urgentTitle": "Need urgent help?",
+      "urgentText": "If you have a power outage, fire or another emergency, call the IT duty phone:",
+      "extension": "ext. 1212",
+      "slaTitle": "SLA deadlines",
+      "threeDays": "3 days",
+      "bytes": "B",
+      "kilobytes": "KB",
+      "megabytes": "MB"
+    },
+    "detail": {
+      "statusUpdated": "Status updated",
+      "statusError": "Error changing status",
+      "sendError": "Send failed",
+      "ratingThanks": "Thanks for the rating!",
+      "details": "Details",
+      "author": "Author",
+      "assignee": "Assignee",
+      "category": "Category",
+      "created": "Created",
+      "updated": "Updated",
+      "description": "Description",
+      "slaBreached": "Overdue",
+      "slaUntil": "until {{date}}",
+      "rateTitle": "Rate the specialist's work",
+      "sendRating": "Send rating",
+      "dialog": "Conversation",
+      "assigneeSuffix": "assignee",
+      "waitingAssignee": "Waiting for assignee",
+      "dialogEmpty": "No messages yet",
+      "dialogEmptyDescription": "Send the first message. The ticket author will be notified.",
+      "typing": "{{name}} is typing…",
+      "internalNote": "Internal note",
+      "internalVisible": "(visible only to agents)",
+      "attach": "Attach file",
+      "internalPlaceholder": "Internal note for agents...",
+      "messagePlaceholder": "Write a message...",
+      "sendMessage": "Send",
+      "composerHint": "Enter to send · Shift+Enter for a new line",
+      "transitions": {
+        "confirm": "Confirm resolution",
+        "reopen": "Reopen",
+        "take": "Take into work",
+        "wait": "Waiting",
+        "resolved": "Resolved",
+        "progress": "In progress"
+      }
+    }
+  },
+  "kb": {
+    "list": {
+      "title": "Knowledge base",
+      "description": "Articles, instructions and IT support regulations for AITU college.",
+      "newArticle": "New article",
+      "articleCount": "{{count}} articles",
+      "helpTitle": "How can we help?",
+      "helpDescription": "Find an answer in the knowledge base, from Wi-Fi setup to VPN configuration and password reset.",
+      "searchPlaceholder": "Example: “HP printer”, “VPN on Mac” or “password reset”",
+      "popular": "Popular:",
+      "popularTerms": ["Wi-Fi", "Printer", "VPN", "Network"],
+      "sections": "Sections",
+      "mostRead": "Most read",
+      "results": "Results: {{count}}",
+      "allArticles": "All articles",
+      "total": "Total {{shown}} of {{total}}",
+      "notFoundTitle": "Nothing found",
+      "notFoundDescription": "Try changing the wording or selecting another section.",
+      "resetFilters": "Reset filters"
+    },
+    "article": {
+      "edit": "Edit",
+      "updated": "updated {{date}}",
+      "notFound": "Didn't find an answer?",
+      "cta": "Create a ticket and we will reply personally"
+    },
+    "editor": {
+      "updated": "Article updated",
+      "created": "Article created",
+      "saveError": "Could not save article",
+      "editTitle": "Edit article",
+      "newTitle": "New article",
+      "description": "Short, clear steps work best. Use Markdown for formatting.",
+      "title": "Title",
+      "titlePlaceholder": "Example: How to configure VPN on macOS",
+      "category": "Category",
+      "tags": "Tags",
+      "tagsHint": "comma separated",
+      "tagsPlaceholder": "vpn, access, office",
+      "content": "Content",
+      "contentHint": "Markdown is supported",
+      "contentPlaceholder": "# Title\n\nShort description...\n\n## Step 1\n...",
+      "locales": {
+        "ru": "Russian version",
+        "en": "English version",
+        "kk": "Kazakh version"
+      },
+      "placeholders": {
+        "ru": {
+          "title": "Example: How to configure VPN on macOS",
+          "content": "# Title\n\nShort description...\n\n## Step 1\n..."
+        },
+        "en": {
+          "title": "Example: How to configure VPN on macOS",
+          "content": "# Title\n\nShort description...\n\n## Step 1\n..."
+        },
+        "kk": {
+          "title": "Example: How to configure VPN on macOS",
+          "content": "# Title\n\nShort description...\n\n## Step 1\n..."
+        }
+      },
+      "published": "Publish (visible to users)"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "unreadSummary": "{{unread}} unread · {{total}} total",
+    "totalSummary": "{{total}} notifications",
+    "markAll": "Mark all read",
+    "markAllSuccess": "All notifications marked as read",
+    "markAllError": "Could not update status",
+    "emptyTitle": "No notifications yet",
+    "emptyDescription": "New messages, assignments and status changes will appear here."
+  },
+  "profile": {
+    "updated": "Profile updated",
+    "saveError": "Could not save",
+    "avatarUpdated": "Avatar updated",
+    "avatarError": "Could not upload avatar",
+    "title": "Profile",
+    "description": "Personal details and account settings",
+    "changeAvatar": "Change avatar"
+  },
+  "admin": {
+    "users": {
+      "roleUpdated": "Role updated",
+      "updateError": "Could not update",
+      "title": "Users",
+      "description": "{{count}} accounts in the system",
+      "columns": {
+        "user": "User",
+        "role": "Role",
+        "specializations": "Specializations",
+        "actions": "Actions"
+      },
+      "change": "Change"
+    }
+  },
+  "assistant": {
+    "initial": "Hello. I am the AituDesk AI assistant. I answer using college knowledge base articles. Ask a question, for example “how to connect a printer” or “why Wi-Fi is not working”.",
+    "error": "Could not get an AI answer. Try again later or create a ticket manually.",
+    "open": "Open AI assistant",
+    "title": "AI assistant",
+    "dialogLabel": "AituDesk AI assistant",
+    "technical": "Technical assistant",
+    "clear": "Clear conversation",
+    "reset": "Reset",
+    "close": "Close",
+    "assistant": "Assistant",
+    "you": "You",
+    "placeholder": "Ask about setup, access or an error…",
+    "send": "Send",
+    "hint": "Enter to send · Shift+Enter for a new line",
+    "sources": "Sources"
+  },
+  "notFound": {
+    "eyebrow": "Error · 404",
+    "title": "Page not found",
+    "description": "The address is incorrect or the content has moved. Return home and continue working."
+  }
+}

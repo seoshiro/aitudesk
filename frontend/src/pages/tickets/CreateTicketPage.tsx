@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   AlertTriangle,
   BookOpen,
@@ -16,31 +18,33 @@ import { api } from '../../api/axios';
 import type { KnowledgeArticle, Priority, Ticket, TicketCategory } from '../../types';
 import { PageHeader } from '../../components/page-header';
 import { Button } from '../../components/ui/button';
-import { categoryLabels, priorityLabels } from '../../lib/mappers';
+import { getCategoryLabelKey, getPriorityLabelKey } from '../../lib/mappers';
+import { normalizeLanguage } from '../../lib/locale';
 import { cn } from '../../lib/utils';
 
 const PRIORITY_OPTIONS: {
   value: Priority;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   icon: React.ElementType;
   accent: string;
 }[] = [
-  { value: 'LOW', label: priorityLabels.LOW, description: 'Вопрос, не блокирующий работу', icon: Sparkles, accent: 'border-border text-muted-foreground' },
-  { value: 'MEDIUM', label: priorityLabels.MEDIUM, description: 'Влияет на часть сотрудников', icon: Clock3, accent: 'border-primary/40 text-primary' },
-  { value: 'HIGH', label: priorityLabels.HIGH, description: 'Блокирует задачу, нужен сегодня', icon: Zap, accent: 'border-warning/40 text-warning' },
-  { value: 'CRITICAL', label: priorityLabels.CRITICAL, description: 'Остановлена работа подразделения', icon: Flame, accent: 'border-danger/40 text-danger' },
+  { value: 'LOW', labelKey: getPriorityLabelKey('LOW'), descriptionKey: 'tickets.create.priorityDescriptions.LOW', icon: Sparkles, accent: 'border-border text-muted-foreground' },
+  { value: 'MEDIUM', labelKey: getPriorityLabelKey('MEDIUM'), descriptionKey: 'tickets.create.priorityDescriptions.MEDIUM', icon: Clock3, accent: 'border-primary/40 text-primary' },
+  { value: 'HIGH', labelKey: getPriorityLabelKey('HIGH'), descriptionKey: 'tickets.create.priorityDescriptions.HIGH', icon: Zap, accent: 'border-warning/40 text-warning' },
+  { value: 'CRITICAL', labelKey: getPriorityLabelKey('CRITICAL'), descriptionKey: 'tickets.create.priorityDescriptions.CRITICAL', icon: Flame, accent: 'border-danger/40 text-danger' },
 ];
 
 const CATEGORIES: TicketCategory[] = ['HARDWARE', 'SOFTWARE', 'NETWORK', 'OTHER'];
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} Б`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+function formatSize(bytes: number, t: TFunction): string {
+  if (bytes < 1024) return `${bytes} ${t('tickets.create.bytes')}`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} ${t('tickets.create.kilobytes')}`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} ${t('tickets.create.megabytes')}`;
 }
 
 export default function CreateTicketPage() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
@@ -56,11 +60,13 @@ export default function CreateTicketPage() {
     if (subject.length < 3) { setKbSuggestions([]); return; }
     debounceRef.current = setTimeout(() => {
       void api
-        .get<{ articles: KnowledgeArticle[] }>(`/kb/articles?search=${encodeURIComponent(subject)}&limit=3`)
+        .get<{ articles: KnowledgeArticle[] }>('/kb/articles', {
+          params: { search: subject, limit: 3, lang: normalizeLanguage(i18n.language) },
+        })
         .then((r) => setKbSuggestions(r.data.articles ?? []))
         .catch(() => setKbSuggestions([]));
     }, 300);
-  }, [subject]);
+  }, [subject, i18n.language]);
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files ?? []);
@@ -81,10 +87,10 @@ export default function CreateTicketPage() {
       const r = await api.post<Ticket>('/tickets', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      toast.success('Заявка создана', { description: `№${r.data.ticketNumber} — ${r.data.subject}` });
+      toast.success(t('tickets.create.success'), { description: `№${r.data.ticketNumber} — ${r.data.subject}` });
       navigate(`/tickets/${r.data.id}`);
     } catch {
-      toast.error('Не удалось создать заявку');
+      toast.error(t('tickets.create.error'));
     } finally {
       setSubmitting(false);
     }
@@ -97,13 +103,13 @@ export default function CreateTicketPage() {
           to="/tickets"
           className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
         >
-          <ChevronLeft className="h-3.5 w-3.5" />К списку заявок
+          <ChevronLeft className="h-3.5 w-3.5" />{t('common.backToTickets')}
         </Link>
       </div>
 
       <PageHeader
-        title="Новая заявка"
-        description="Опишите проблему подробно — это ускорит её решение. Обязательные поля отмечены звёздочкой."
+        title={t('tickets.create.title')}
+        description={t('tickets.create.description')}
       />
 
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
@@ -111,13 +117,13 @@ export default function CreateTicketPage() {
           onSubmit={(e) => void handleSubmit(e)}
           className="rounded-md border border-border bg-card p-6 space-y-5"
         >
-          <FormField label="Заголовок" required hint="Коротко: что именно не работает">
+          <FormField label={t('tickets.create.subject')} required hint={t('tickets.create.subjectHint')}>
             <input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               required
               minLength={5}
-              placeholder="Например: Принтер HP в 305 аудитории не печатает"
+              placeholder={t('tickets.create.subjectPlaceholder')}
               className="h-11 w-full rounded-md border border-border bg-background px-3 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </FormField>
@@ -126,7 +132,7 @@ export default function CreateTicketPage() {
             <div className="rounded-md border border-primary/25 bg-primary/5 p-3">
               <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-primary flex items-center gap-1.5">
                 <BookOpen className="w-3.5 h-3.5" />
-                Возможно, ответ уже есть в базе знаний
+                {t('tickets.create.kbSuggestion')}
               </p>
               <ul className="mt-2 space-y-1">
                 {kbSuggestions.map((a) => (
@@ -144,7 +150,7 @@ export default function CreateTicketPage() {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField label="Категория" required>
+            <FormField label={t('tickets.list.category')} required>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as TicketCategory)}
@@ -152,14 +158,14 @@ export default function CreateTicketPage() {
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
-                    {categoryLabels[c]}
+                    {t(getCategoryLabelKey(c))}
                   </option>
                 ))}
               </select>
             </FormField>
           </div>
 
-          <FormField label="Приоритет" required>
+          <FormField label={t('tickets.list.priority')} required>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {PRIORITY_OPTIONS.map((o) => {
                 const active = priority === o.value;
@@ -185,9 +191,9 @@ export default function CreateTicketPage() {
                       <Icon className="h-3.5 w-3.5" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-foreground">{o.label}</div>
+                      <div className="text-sm font-medium text-foreground">{t(o.labelKey)}</div>
                       <div className="text-[11px] text-muted-foreground leading-snug">
-                        {o.description}
+                        {t(o.descriptionKey)}
                       </div>
                     </div>
                   </button>
@@ -197,9 +203,9 @@ export default function CreateTicketPage() {
           </FormField>
 
           <FormField
-            label="Описание"
+            label={t('tickets.create.descriptionLabel')}
             required
-            hint="Что делали, какая ошибка, когда началось"
+            hint={t('tickets.create.descriptionHint')}
           >
             <textarea
               value={description}
@@ -207,12 +213,12 @@ export default function CreateTicketPage() {
               required
               minLength={10}
               rows={6}
-              placeholder={`Опишите проблему подробно:\n• Что именно не работает\n• Что вы уже пробовали\n• Какие ошибки отображаются\n• Срочность (есть ли дедлайн)`}
+              placeholder={t('tickets.create.descriptionPlaceholder')}
               className="w-full rounded-md border border-border bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring resize-y min-h-[140px]"
             />
           </FormField>
 
-          <FormField label="Вложения" hint="Скриншоты, фото, логи — до 5 файлов, 10 МБ">
+          <FormField label={t('tickets.create.attachments')} hint={t('tickets.create.attachmentsHint')}>
             <div className="space-y-2">
               {files.length > 0 && (
                 <ul className="space-y-1.5">
@@ -226,13 +232,13 @@ export default function CreateTicketPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-xs font-medium">{f.name}</div>
-                        <div className="text-[10px] text-muted-foreground">{formatSize(f.size)}</div>
+                        <div className="text-[10px] text-muted-foreground">{formatSize(f.size, t)}</div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
                         className="grid h-7 w-7 place-items-center rounded text-muted-foreground hover:text-danger hover:bg-accent/50"
-                        aria-label="Удалить"
+                        aria-label={t('common.delete')}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -242,7 +248,7 @@ export default function CreateTicketPage() {
               )}
               <label className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border bg-background py-5 text-xs text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors cursor-pointer">
                 <Paperclip className="h-3.5 w-3.5" />
-                Прикрепить файл или перетащите сюда
+                {t('tickets.create.attachFile')}
                 <input
                   type="file"
                   multiple
@@ -256,17 +262,17 @@ export default function CreateTicketPage() {
 
           <div className="flex items-center justify-between pt-2 border-t border-border">
             <span className="text-[11px] text-muted-foreground">
-              После отправки вы получите уведомление с номером заявки
+              {t('tickets.create.submitHint')}
             </span>
             <div className="flex items-center gap-2">
               <Button variant="ghost" type="button" onClick={() => navigate('/tickets')}>
-                Отмена
+                {t('common.cancel')}
               </Button>
               <Button
                 type="submit"
                 disabled={submitting || !subject.trim() || !description.trim()}
               >
-                {submitting ? 'Отправляем...' : 'Отправить заявку'}
+                {submitting ? t('tickets.create.submitting') : t('tickets.create.submit')}
               </Button>
             </div>
           </div>
@@ -279,32 +285,32 @@ export default function CreateTicketPage() {
               <div className="grid h-7 w-7 place-items-center rounded-md bg-warning/10 border border-warning/25">
                 <AlertTriangle className="h-3.5 w-3.5 text-warning" />
               </div>
-              <h3 className="text-sm font-semibold">Срочно нужна помощь?</h3>
+              <h3 className="text-sm font-semibold">{t('tickets.create.urgentTitle')}</h3>
             </div>
             <p className="mt-2.5 text-xs text-muted-foreground leading-relaxed">
-              Если у вас отключение электричества, пожар или другая аварийная ситуация — звоните на дежурный телефон IT-отдела:{' '}
-              <span className="text-foreground font-medium">внутр. 1212</span>.
+              {t('tickets.create.urgentText')}{' '}
+              <span className="text-foreground font-medium">{t('tickets.create.extension')}</span>.
             </p>
           </div>
 
           <div className="rounded-md border border-border bg-card p-5">
-            <h3 className="text-sm font-semibold">Сроки по SLA</h3>
+            <h3 className="text-sm font-semibold">{t('tickets.create.slaTitle')}</h3>
             <ul className="mt-3 space-y-2 text-xs">
               <li className="flex items-center justify-between">
-                <span className="text-muted-foreground">Критичный</span>
-                <span className="font-medium text-danger">1 ч</span>
+                <span className="text-muted-foreground">{t(getPriorityLabelKey('CRITICAL'))}</span>
+                <span className="font-medium text-danger">1 {t('dashboard.sla.hoursShort')}</span>
               </li>
               <li className="flex items-center justify-between">
-                <span className="text-muted-foreground">Высокий</span>
-                <span className="font-medium text-warning">4 ч</span>
+                <span className="text-muted-foreground">{t(getPriorityLabelKey('HIGH'))}</span>
+                <span className="font-medium text-warning">4 {t('dashboard.sla.hoursShort')}</span>
               </li>
               <li className="flex items-center justify-between">
-                <span className="text-muted-foreground">Средний</span>
-                <span className="font-medium text-primary">24 ч</span>
+                <span className="text-muted-foreground">{t(getPriorityLabelKey('MEDIUM'))}</span>
+                <span className="font-medium text-primary">24 {t('dashboard.sla.hoursShort')}</span>
               </li>
               <li className="flex items-center justify-between">
-                <span className="text-muted-foreground">Низкий</span>
-                <span className="font-medium text-muted-foreground">3 дня</span>
+                <span className="text-muted-foreground">{t(getPriorityLabelKey('LOW'))}</span>
+                <span className="font-medium text-muted-foreground">{t('tickets.create.threeDays')}</span>
               </li>
             </ul>
           </div>

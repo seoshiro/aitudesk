@@ -60,6 +60,8 @@ export interface KnowledgeArticle {
   id: string;
   title: string;
   content: string;
+  locale?: 'ru' | 'en' | 'kk';
+  translations?: Partial<Record<'ru' | 'en' | 'kk', { title: string; content: string; slug?: string }>>;
   category: TicketCategory;
   tags: string[];
   published: boolean;
@@ -68,24 +70,11 @@ export interface KnowledgeArticle {
   updatedAt: string;
 }
 
-export const STATUS_LABEL: Record<TicketStatus, string> = {
-  NEW: 'Новый', IN_PROGRESS: 'В работе', WAITING: 'Ожидание',
-  RESOLVED: 'Решено', CLOSED: 'Закрыт', REOPENED: 'Переоткрыт',
-};
-
 export const STATUS_CLASS: Record<TicketStatus, string> = {
   NEW: 'badge-new', IN_PROGRESS: 'badge-progress', WAITING: 'badge-waiting',
   RESOLVED: 'badge-resolved', CLOSED: 'badge-closed', REOPENED: 'badge-reopened',
 };
 
-export const PRIORITY_LABEL: Record<Priority, string> = {
-  LOW: 'Низкий', MEDIUM: 'Средний', HIGH: 'Высокий', CRITICAL: 'Критический',
-};
-
 export const PRIORITY_CLASS: Record<Priority, string> = {
   LOW: 'priority-low', MEDIUM: 'priority-medium', HIGH: 'priority-high', CRITICAL: 'priority-critical',
-};
-
-export const CATEGORY_LABEL: Record<TicketCategory, string> = {
-  HARDWARE: 'Железо', SOFTWARE: 'ПО', NETWORK: 'Сеть', OTHER: 'Другое',
 };

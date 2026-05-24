@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { useAuthStore, type AuthUser } from '../store/authStore';
+import { languageStorageKey } from '../i18n';
+import { normalizeLanguage } from '../lib/locale';
 
 // In Docker: VITE_API_URL=/api (relative, same-origin through Nginx)
 // In local dev: VITE_API_URL=http://localhost:4000/api
@@ -14,6 +16,9 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  config.headers['Accept-Language'] = normalizeLanguage(
+    typeof window === 'undefined' ? 'ru' : window.localStorage.getItem(languageStorageKey) ?? 'ru',
+  );
   return config;
 });
 

@@ -1,4 +1,5 @@
 import { NavLink, Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard,
   Ticket,
@@ -15,36 +16,37 @@ import { Brand } from '@/components/brand';
 import { UserAvatar } from '@/components/user-avatar';
 import { useAuthStore } from '@/store/authStore';
 import { useNotifStore } from '@/store/notifStore';
-import { roleLabels } from '@/lib/mappers';
+import { getRoleLabelKey } from '@/lib/mappers';
 
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
   badge?: string | number;
 };
 
 const mainNav = (unread: number): NavItem[] => [
-  { href: '/dashboard', label: 'Панель', icon: LayoutDashboard },
-  { href: '/tickets', label: 'Заявки', icon: Ticket },
-  { href: '/tickets/create', label: 'Создать заявку', icon: PlusCircle },
-  { href: '/kb', label: 'База знаний', icon: BookOpen },
+  { href: '/dashboard', labelKey: 'sidebar.dashboard', icon: LayoutDashboard },
+  { href: '/tickets', labelKey: 'sidebar.tickets', icon: Ticket },
+  { href: '/tickets/create', labelKey: 'sidebar.newTicket', icon: PlusCircle },
+  { href: '/kb', labelKey: 'sidebar.kb', icon: BookOpen },
   {
     href: '/notifications',
-    label: 'Уведомления',
+    labelKey: 'sidebar.notifications',
     icon: Bell,
     badge: unread > 0 ? (unread > 99 ? '99+' : unread) : undefined,
   },
 ];
 
 const adminNav: NavItem[] = [
-  { href: '/users', label: 'Пользователи', icon: Users },
-  { href: '/kb/create', label: 'Новая статья', icon: PlusCircle },
+  { href: '/users', labelKey: 'sidebar.users', icon: Users },
+  { href: '/kb/create', labelKey: 'sidebar.newArticle', icon: PlusCircle },
 ];
 
-const accountNav: NavItem[] = [{ href: '/profile', label: 'Профиль', icon: UserIcon }];
+const accountNav: NavItem[] = [{ href: '/profile', labelKey: 'sidebar.profile', icon: UserIcon }];
 
 export function AppSidebar({ onNavigate, onLogout }: { onNavigate?: () => void; onLogout: () => void }) {
+  const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const unread = useNotifStore((s) => s.unreadCount);
 
@@ -64,21 +66,21 @@ export function AppSidebar({ onNavigate, onLogout }: { onNavigate?: () => void; 
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-1">
-        <SidebarSection label="01" title="Основное">
+        <SidebarSection label="01" title={t('sidebar.main')}>
           {mainNav(unread).map((item) => (
             <SidebarLink key={item.href} item={item} onNavigate={onNavigate} />
           ))}
         </SidebarSection>
 
         {user?.role === 'ADMIN' ? (
-          <SidebarSection label="02" title="Администрирование">
+          <SidebarSection label="02" title={t('sidebar.admin')}>
             {adminNav.map((item) => (
               <SidebarLink key={item.href} item={item} onNavigate={onNavigate} />
             ))}
           </SidebarSection>
         ) : null}
 
-        <SidebarSection label={user?.role === 'ADMIN' ? '03' : '02'} title="Аккаунт">
+        <SidebarSection label={user?.role === 'ADMIN' ? '03' : '02'} title={t('sidebar.account')}>
           {accountNav.map((item) => (
             <SidebarLink key={item.href} item={item} onNavigate={onNavigate} />
           ))}
@@ -87,11 +89,11 @@ export function AppSidebar({ onNavigate, onLogout }: { onNavigate?: () => void; 
 
       <div className="px-6 py-4 border-t border-sidebar-border">
         <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          IT-отдел
+          {t('sidebar.itDept')}
         </div>
         <div className="mt-2 space-y-0.5 text-[12px] leading-snug">
           <div className="flex items-baseline justify-between">
-            <span className="text-muted-foreground">вн. номер</span>
+            <span className="text-muted-foreground">{t('sidebar.extension')}</span>
             <span className="font-mono tabular-nums text-foreground">1212</span>
           </div>
           <div className="flex items-baseline justify-between gap-2">
@@ -108,13 +110,13 @@ export function AppSidebar({ onNavigate, onLogout }: { onNavigate?: () => void; 
             <div className="min-w-0 flex-1">
               <div className="truncate text-[13px] font-medium">{user.name}</div>
               <div className="truncate text-[11px] text-muted-foreground">
-                {roleLabels[user.role]}
+                {t(getRoleLabelKey(user.role))}
               </div>
             </div>
             <button
               onClick={onLogout}
               className="grid h-8 w-8 place-items-center rounded text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
-              aria-label="Выйти"
+              aria-label={t('sidebar.logout')}
             >
               <LogOut className="h-4 w-4" />
             </button>
@@ -155,6 +157,7 @@ const SIBLING_EXCLUSIONS: Record<string, string[]> = {
 };
 
 function SidebarLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
+  const { t } = useTranslation();
   const Icon = item.icon;
   const { pathname } = useLocation();
 
@@ -190,7 +193,7 @@ function SidebarLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => v
           className={cn('h-[15px] w-[15px] shrink-0', active ? 'text-primary' : 'text-muted-foreground')}
           strokeWidth={active ? 2 : 1.75}
         />
-        <span className="truncate flex-1">{item.label}</span>
+        <span className="truncate flex-1">{t(item.labelKey)}</span>
         {item.badge ? (
           <span
             className={cn(
