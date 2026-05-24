@@ -11,34 +11,51 @@ export type BackendStatus =
 export type BackendPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type BackendCategory = 'HARDWARE' | 'SOFTWARE' | 'NETWORK' | 'OTHER';
 
-export const roleLabels: Record<BackendRole, string> = {
-  USER: 'Пользователь',
-  AGENT: 'Агент поддержки',
-  ADMIN: 'Администратор',
+export const roleLabelKeys: Record<BackendRole, string> = {
+  USER: 'entities.roles.USER',
+  AGENT: 'entities.roles.AGENT',
+  ADMIN: 'entities.roles.ADMIN',
 };
 
-export const statusLabels: Record<BackendStatus, string> = {
-  NEW: 'Новая',
-  IN_PROGRESS: 'В работе',
-  WAITING: 'Ожидает',
-  RESOLVED: 'Решена',
-  CLOSED: 'Закрыта',
-  REOPENED: 'Возобновлена',
+export const statusLabelKeys: Record<BackendStatus, string> = {
+  NEW: 'entities.statuses.NEW',
+  IN_PROGRESS: 'entities.statuses.IN_PROGRESS',
+  WAITING: 'entities.statuses.WAITING',
+  RESOLVED: 'entities.statuses.RESOLVED',
+  CLOSED: 'entities.statuses.CLOSED',
+  REOPENED: 'entities.statuses.REOPENED',
 };
 
-export const priorityLabels: Record<BackendPriority, string> = {
-  LOW: 'Низкий',
-  MEDIUM: 'Средний',
-  HIGH: 'Высокий',
-  CRITICAL: 'Критичный',
+export const priorityLabelKeys: Record<BackendPriority, string> = {
+  LOW: 'entities.priorities.LOW',
+  MEDIUM: 'entities.priorities.MEDIUM',
+  HIGH: 'entities.priorities.HIGH',
+  CRITICAL: 'entities.priorities.CRITICAL',
 };
 
-export const categoryLabels: Record<BackendCategory, string> = {
-  HARDWARE: 'Оборудование',
-  SOFTWARE: 'Программы',
-  NETWORK: 'Сеть',
-  OTHER: 'Другое',
+export const categoryLabelKeys: Record<string, string> = {
+  HARDWARE: 'entities.categories.HARDWARE',
+  SOFTWARE: 'entities.categories.SOFTWARE',
+  NETWORK: 'entities.categories.NETWORK',
+  ACCESS: 'entities.categories.ACCESS',
+  OTHER: 'entities.categories.OTHER',
 };
+
+export const notificationTypeLabelKeys: Record<string, string> = {
+  NEW_MESSAGE: 'entities.notifications.NEW_MESSAGE',
+  TICKET_ASSIGNED: 'entities.notifications.TICKET_ASSIGNED',
+  STATUS_CHANGED: 'entities.notifications.STATUS_CHANGED',
+  TICKET_RATED: 'entities.notifications.TICKET_RATED',
+  SLA_BREACH: 'entities.notifications.SLA_BREACH',
+};
+
+export const getRoleLabelKey = (role: BackendRole) => roleLabelKeys[role];
+export const getStatusLabelKey = (status: BackendStatus) => statusLabelKeys[status];
+export const getPriorityLabelKey = (priority: BackendPriority) => priorityLabelKeys[priority];
+export const getCategoryLabelKey = (category: BackendCategory | string) =>
+  categoryLabelKeys[category] ?? category;
+export const getNotificationTypeLabelKey = (type: string) =>
+  notificationTypeLabelKeys[type] ?? type;
 
 // SLA reference hours, mirrors backend/sla.service
 export const slaHours: Record<BackendPriority, { response: number; resolve: number }> = {
@@ -70,20 +87,4 @@ export function initialsOf(name: string): string {
   if (parts.length === 0) return '??';
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
-}
-
-// Relative ru datetime
-export function formatRelativeRu(isoOrDate: string | Date): string {
-  const date = typeof isoOrDate === 'string' ? new Date(isoOrDate) : isoOrDate;
-  const diff = Date.now() - date.getTime();
-  const sec = Math.round(diff / 1000);
-  if (sec < 45) return 'только что';
-  const min = Math.round(sec / 60);
-  if (min < 60) return `${min} мин назад`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr} ч назад`;
-  const day = Math.round(hr / 24);
-  if (day === 1) return 'вчера';
-  if (day < 7) return `${day} дн назад`;
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
 }

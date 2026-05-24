@@ -1,6 +1,7 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { useNotifStore } from '../store/notifStore';
 import { api } from '../api/axios';
@@ -11,6 +12,7 @@ import { Toaster } from '../components/ui/sonner';
 import { connectSocket, disconnectSocket } from '../socket/socket';
 
 export default function AppLayout() {
+  const { t } = useTranslation();
   const { user, logout } = useAuthStore();
   const setNotifications = useNotifStore((s) => s.setNotifications);
   const navigate = useNavigate();
@@ -66,7 +68,7 @@ export default function AppLayout() {
           <button
             onClick={() => setSidebarOpen(false)}
             className="absolute top-3 right-3 z-10 grid h-8 w-8 place-items-center rounded text-muted-foreground hover:text-foreground hover:bg-accent"
-            aria-label="Закрыть меню"
+            aria-label={t('sidebar.closeMenu')}
           >
             <X className="h-4 w-4" />
           </button>

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell, Menu, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,21 +15,32 @@ import { Brand } from '@/components/brand';
 import { useAuthStore } from '@/store/authStore';
 import { useNotifStore } from '@/store/notifStore';
 import { api } from '@/api/axios';
+import { languageStorageKey, supportedLanguages, type SupportedLanguage } from '@/i18n';
+import { formatDate, normalizeLanguage } from '@/lib/locale';
+import { cn } from '@/lib/utils';
 
-function formatTodayRu() {
-  return new Date().toLocaleDateString('ru-RU', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
-}
+const languageLabels: Record<SupportedLanguage, string> = {
+  ru: 'RU',
+  en: 'EN',
+  kk: 'KZ',
+};
 
 export function AppTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
+  const { t, i18n } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const unread = useNotifStore((s) => s.unreadCount);
   const navigate = useNavigate();
-  const today = React.useMemo(formatTodayRu, []);
+  const currentLanguage = normalizeLanguage(i18n.resolvedLanguage ?? i18n.language);
+  const today = React.useMemo(
+    () =>
+      formatDate(new Date(), i18n.language, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      }),
+    [i18n.language],
+  );
 
   const handleLogout = async () => {
     try {
@@ -40,12 +52,17 @@ export function AppTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
     navigate('/login');
   };
 
+  const handleLanguageChange = (lng: SupportedLanguage) => {
+    window.localStorage.setItem(languageStorageKey, lng);
+    void i18n.changeLanguage(lng);
+  };
+
   return (
     <header className="sticky top-0 z-30 h-14 flex items-center gap-3 px-4 lg:px-8 border-b border-border bg-background/85 backdrop-blur-md">
       <button
         onClick={onMenuClick}
         className="lg:hidden p-1.5 -ml-1.5 rounded-md hover:bg-accent transition-colors"
-        aria-label="Меню"
+        aria-label={t('topbar.menu')}
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -56,16 +73,37 @@ export function AppTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
 
       <div className="hidden lg:flex items-baseline gap-3 min-w-0">
         <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-          Сегодня
+          {t('common.today')}
         </span>
         <span className="font-serif italic text-[14px] text-foreground/90 truncate">{today}</span>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <div
+          className="inline-flex h-9 items-center rounded border border-border bg-card p-0.5"
+          aria-label={t('common.language')}
+        >
+          {supportedLanguages.map((lng) => (
+            <button
+              key={lng}
+              type="button"
+              onClick={() => handleLanguageChange(lng)}
+              className={cn(
+                'h-7 px-2.5 rounded-[3px] text-[10.5px] font-semibold tracking-[0.16em] transition-colors',
+                currentLanguage === lng
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {languageLabels[lng]}
+            </button>
+          ))}
+        </div>
+
         <Link
           to="/notifications"
           className="relative grid h-9 w-9 place-items-center rounded border border-border bg-card hover:bg-accent transition-colors"
-          aria-label="Уведомления"
+          aria-label={t('topbar.notifications')}
         >
           <Bell className="h-4 w-4" strokeWidth={1.75} />
           {unread > 0 ? (
@@ -95,13 +133,13 @@ export function AppTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to="/profile">Профиль</Link>
+                <Link to="/profile">{t('topbar.profile')}</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/notifications">Уведомления</Link>
+                <Link to="/notifications">{t('topbar.notifications')}</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => void handleLogout()}>Выйти</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => void handleLogout()}>{t('topbar.logout')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}

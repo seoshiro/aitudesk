@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Calendar,
   CheckCircle2,
@@ -22,9 +23,11 @@ import { useAuthStore } from '../../store/authStore';
 import { Button } from '../../components/ui/button';
 import { StatusBadge, PriorityBadge } from '../../components/ticket-badges';
 import { UserAvatar } from '../../components/user-avatar';
-import { categoryLabels, formatRelativeRu } from '../../lib/mappers';
+import { getCategoryLabelKey } from '../../lib/mappers';
+import { formatDateTime, formatRelative } from '../../lib/locale';
 import { cn } from '../../lib/utils';
 import {
+  connectSocket,
   getSocket,
   joinTicketRoom,
   leaveTicketRoom,
@@ -33,6 +36,7 @@ import {
 } from '../../socket/socket';
 
 export default function TicketDetailPage() {
+  const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const user = useAuthStore((s) => s.user)!;
   const [ticket, setTicket]       = useState<Ticket | null>(null);
@@ -59,6 +63,7 @@ export default function TicketDetailPage() {
   useEffect(() => {
     void loadAll();
     if (!id) return;
+    connectSocket();
     joinTicketRoom(id);
     const socket = getSocket();
     if (socket) {
@@ -93,11 +98,11 @@ export default function TicketDetailPage() {
     try {
       const r = await api.put<Ticket>(`/tickets/${ticket.id}/status`, { status: newStatus });
       setTicket(r.data);
-      toast.success('Статус обновлён');
+      toast.success(t('tickets.detail.statusUpdated'));
       if (newStatus === 'CLOSED') setShowRating(true);
     } catch {
       void loadAll();
-      toast.error('Ошибка при смене статуса');
+      toast.error(t('tickets.detail.statusError'));
     }
   };
 
@@ -118,7 +123,7 @@ export default function TicketDetailPage() {
       await api.post(`/tickets/${ticket.id}/messages`, { content: optimistic.content, type: optimistic.type });
     } catch {
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
-      toast.error('Ошибка отправки');
+      toast.error(t('tickets.detail.sendError'));
     } finally {
       setSending(false);
     }
@@ -134,7 +139,7 @@ export default function TicketDetailPage() {
   const handleRate = async () => {
     if (!ticket || rating === 0) return;
     await api.post(`/tickets/${ticket.id}/rate`, { score: rating });
-    toast.success('Спасибо за оценку!');
+    toast.success(t('tickets.detail.ratingThanks'));
     setShowRating(false);
   };
 
@@ -149,22 +154,13 @@ export default function TicketDetailPage() {
   const canSeeInternal = user.role !== 'USER';
   const transitions = getAvailableTransitions(user.role, ticket.status);
 
-  const formatDateTimeRu = (iso: string) =>
-    new Date(iso).toLocaleString('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
   const visibleMessages = messages.filter((m) => canSeeInternal || m.type !== 'INTERNAL');
 
   return (
     <div className="max-w-[1600px] mx-auto">
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-5">
         <Link to="/tickets" className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
-          <ChevronLeft className="h-3.5 w-3.5" />К списку заявок
+          <ChevronLeft className="h-3.5 w-3.5" />{t('common.backToTickets')}
         </Link>
         <span>/</span>
         <span className="font-mono">#{ticket.ticketNumber}</span>
@@ -179,7 +175,7 @@ export default function TicketDetailPage() {
               <PriorityBadge priority={ticket.priority} />
               <span className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
                 <Tag className="h-3 w-3" />
-                {categoryLabels[ticket.category]}
+                {t(getCategoryLabelKey(ticket.category))}
               </span>
             </div>
             <h1 className="mt-4 font-serif text-2xl tracking-[-0.01em] text-balance leading-tight">{ticket.subject}</h1>
@@ -188,7 +184,7 @@ export default function TicketDetailPage() {
                 {transitions.map((tr) => (
                   <Button key={tr.newStatus} size="sm" variant={tr.primary ? 'default' : 'outline'} onClick={() => void handleStatusChange(tr.newStatus)} className="h-8">
                     <tr.icon className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.75} />
-                    {tr.label}
+                    {t(tr.labelKey)}
                   </Button>
                 ))}
               </div>
@@ -196,47 +192,49 @@ export default function TicketDetailPage() {
           </div>
 
           <div className="rounded-md border border-border bg-card p-6">
-            <h2 className="text-sm font-semibold">Детали</h2>
+            <h2 className="text-sm font-semibold">{t('tickets.detail.details')}</h2>
             <dl className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-4 text-sm">
-              <Meta icon={UserIcon} label="Автор">
+              <Meta icon={UserIcon} label={t('tickets.detail.author')}>
                 <div className="flex items-center gap-2 min-w-0">
                   <UserAvatar user={ticket.creator} size={24} />
                   <span className="truncate">{ticket.creator.name}</span>
                 </div>
               </Meta>
-              <Meta icon={UserIcon} label="Исполнитель">
+              <Meta icon={UserIcon} label={t('tickets.detail.assignee')}>
                 {ticket.assignee ? (
                   <div className="flex items-center gap-2 min-w-0">
                     <UserAvatar user={ticket.assignee} size={24} />
                     <span className="truncate">{ticket.assignee.name}</span>
                   </div>
                 ) : (
-                  <span className="italic text-muted-foreground">Не назначен</span>
+                  <span className="italic text-muted-foreground">{t('common.notAssigned')}</span>
                 )}
               </Meta>
-              <Meta icon={Tag} label="Категория">
-                <span>{categoryLabels[ticket.category]}</span>
+              <Meta icon={Tag} label={t('tickets.detail.category')}>
+                <span>{t(getCategoryLabelKey(ticket.category))}</span>
               </Meta>
-              <Meta icon={Calendar} label="Создана">
-                <span>{formatDateTimeRu(ticket.createdAt)}</span>
+              <Meta icon={Calendar} label={t('tickets.detail.created')}>
+                <span>{formatDateTime(ticket.createdAt, i18n.language)}</span>
               </Meta>
               <Meta icon={Clock} label="SLA">
                 {ticket.slaDeadlineResolve ? (
                   <span className={cn(ticket.slaBreached ? 'text-danger' : 'text-success')}>
-                    {ticket.slaBreached ? 'Просрочено' : `до ${formatDateTimeRu(ticket.slaDeadlineResolve)}`}
+                    {ticket.slaBreached
+                      ? t('tickets.detail.slaBreached')
+                      : t('tickets.detail.slaUntil', { date: formatDateTime(ticket.slaDeadlineResolve, i18n.language) })}
                   </span>
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}
               </Meta>
-              <Meta icon={MapPin} label="Обновлена">
-                <span>{formatRelativeRu(ticket.updatedAt)}</span>
+              <Meta icon={MapPin} label={t('tickets.detail.updated')}>
+                <span>{formatRelative(ticket.updatedAt, i18n.language, t)}</span>
               </Meta>
             </dl>
           </div>
 
           <div className="rounded-md border border-border bg-card p-6">
-            <h2 className="text-sm font-semibold">Описание</h2>
+            <h2 className="text-sm font-semibold">{t('tickets.detail.description')}</h2>
             <p className="mt-3 text-sm text-foreground/90 leading-relaxed whitespace-pre-line text-pretty">
               {ticket.description}
             </p>
@@ -244,13 +242,13 @@ export default function TicketDetailPage() {
 
           {showRating && (
             <div className="rounded-md border border-primary/30 bg-primary/5 p-6">
-              <h3 className="text-sm font-semibold">Оцените работу специалиста</h3>
+              <h3 className="text-sm font-semibold">{t('tickets.detail.rateTitle')}</h3>
               <div className="mt-3 flex gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button key={star} onClick={() => setRating(star)} className={cn('text-2xl transition-transform hover:scale-110', star <= rating ? 'text-warning' : 'text-muted-foreground/40')}>★</button>
                 ))}
               </div>
-              <Button onClick={() => void handleRate()} disabled={rating === 0} size="sm" className="mt-4">Отправить оценку</Button>
+              <Button onClick={() => void handleRate()} disabled={rating === 0} size="sm" className="mt-4">{t('tickets.detail.sendRating')}</Button>
             </div>
           )}
         </section>
@@ -265,10 +263,12 @@ export default function TicketDetailPage() {
                   </div>
                 )}
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold truncate">Диалог</div>
+                  <div className="text-sm font-semibold truncate">{t('tickets.detail.dialog')}</div>
                   <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                     <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
-                    {ticket.assignee ? `${ticket.assignee.name.split(' ')[0]} — исполнитель` : 'Ожидает исполнителя'}
+                    {ticket.assignee
+                      ? `${ticket.assignee.name.split(' ')[0]} — ${t('tickets.detail.assigneeSuffix')}`
+                      : t('tickets.detail.waitingAssignee')}
                   </div>
                 </div>
               </div>
@@ -281,22 +281,22 @@ export default function TicketDetailPage() {
                     <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-secondary border border-border">
                       <Send className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
                     </div>
-                    <h3 className="mt-4 text-sm font-medium">Диалог пока пуст</h3>
+                    <h3 className="mt-4 text-sm font-medium">{t('tickets.detail.dialogEmpty')}</h3>
                     <p className="mt-1 text-xs text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
-                      Напишите первое сообщение — автор заявки получит уведомление.
+                      {t('tickets.detail.dialogEmptyDescription')}
                     </p>
                   </div>
                 </div>
               ) : (
                 visibleMessages.map((m) => (
-                  <MessageBubble key={m.id} msg={m} alignRight={m.author.id === user.id} />
+                  <MessageBubble key={m.id} msg={m} alignRight={m.author.id === user.id} language={i18n.language} />
                 ))
               )}
               {typingName && (
                 <div className="flex items-end gap-2">
                   <div className="grid h-[26px] w-[26px] place-items-center rounded-full bg-secondary border border-border" />
                   <div className="rounded-md bg-secondary border border-border px-3 py-2 text-xs text-muted-foreground">
-                    {typingName} печатает…
+                    {t('tickets.detail.typing', { name: typingName })}
                   </div>
                 </div>
               )}
@@ -334,7 +334,7 @@ export default function TicketDetailPage() {
                     </span>
                     <span className={cn(internal ? 'text-warning' : 'text-muted-foreground')}>
                       <Lock className="inline h-2.5 w-2.5 mr-1" />
-                      Внутренняя заметка {internal ? '(видна только агентам)' : ''}
+                      {t('tickets.detail.internalNote')} {internal ? t('tickets.detail.internalVisible') : ''}
                     </span>
                   </label>
                 )}
@@ -342,7 +342,7 @@ export default function TicketDetailPage() {
                   <button
                     type="button"
                     className="grid h-9 w-9 place-items-center rounded-md border border-border bg-background hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
-                    aria-label="Прикрепить файл"
+                    aria-label={t('tickets.detail.attach')}
                   >
                     <Paperclip className="h-4 w-4" />
                   </button>
@@ -356,20 +356,20 @@ export default function TicketDetailPage() {
                       }
                     }}
                     rows={1}
-                    placeholder={internal ? 'Внутренняя заметка для агентов...' : 'Написать сообщение...'}
+                    placeholder={internal ? t('tickets.detail.internalPlaceholder') : t('tickets.detail.messagePlaceholder')}
                     className="flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring min-h-[36px] max-h-24"
                   />
                   <button
                     type="submit"
                     disabled={sending || !content.trim()}
                     className="grid h-9 w-9 place-items-center rounded-md bg-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed text-primary-foreground transition-colors"
-                    aria-label="Отправить"
+                    aria-label={t('tickets.detail.sendMessage')}
                   >
                     <Send className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="mt-1.5 text-[10px] text-muted-foreground/70">
-                  Enter — отправить · Shift+Enter — новая строка
+                  {t('tickets.detail.composerHint')}
                 </div>
               </form>
             )}
@@ -381,7 +381,7 @@ export default function TicketDetailPage() {
 }
 
 type TransitionAction = {
-  label: string;
+  labelKey: string;
   newStatus: TicketStatus;
   icon: React.ElementType;
   primary?: boolean;
@@ -391,8 +391,8 @@ function getAvailableTransitions(role: 'USER' | 'AGENT' | 'ADMIN', status: Ticke
   if (role === 'USER') {
     if (status === 'RESOLVED') {
       return [
-        { label: 'Подтвердить решение', newStatus: 'CLOSED', icon: CheckCircle2, primary: true },
-        { label: 'Переоткрыть', newStatus: 'REOPENED', icon: RotateCcw },
+        { labelKey: 'tickets.detail.transitions.confirm', newStatus: 'CLOSED', icon: CheckCircle2, primary: true },
+        { labelKey: 'tickets.detail.transitions.reopen', newStatus: 'REOPENED', icon: RotateCcw },
       ];
     }
     return [];
@@ -400,21 +400,21 @@ function getAvailableTransitions(role: 'USER' | 'AGENT' | 'ADMIN', status: Ticke
   if (role === 'AGENT') {
     const actions: TransitionAction[] = [];
     if (['NEW', 'WAITING', 'REOPENED'].includes(status)) {
-      actions.push({ label: 'Взять в работу', newStatus: 'IN_PROGRESS', icon: PlayCircle, primary: true });
+      actions.push({ labelKey: 'tickets.detail.transitions.take', newStatus: 'IN_PROGRESS', icon: PlayCircle, primary: true });
     }
     if (status === 'IN_PROGRESS') {
-      actions.push({ label: 'Ожидание', newStatus: 'WAITING', icon: PauseCircle });
+      actions.push({ labelKey: 'tickets.detail.transitions.wait', newStatus: 'WAITING', icon: PauseCircle });
     }
     if (['IN_PROGRESS', 'WAITING'].includes(status)) {
-      actions.push({ label: 'Решено', newStatus: 'RESOLVED', icon: CheckCircle2 });
+      actions.push({ labelKey: 'tickets.detail.transitions.resolved', newStatus: 'RESOLVED', icon: CheckCircle2 });
     }
     return actions;
   }
   // ADMIN
   return [
-    { label: 'В работу', newStatus: 'IN_PROGRESS', icon: PlayCircle },
-    { label: 'Ожидание', newStatus: 'WAITING', icon: PauseCircle },
-    { label: 'Решено', newStatus: 'RESOLVED', icon: CheckCircle2 },
+    { labelKey: 'tickets.detail.transitions.progress', newStatus: 'IN_PROGRESS', icon: PlayCircle },
+    { labelKey: 'tickets.detail.transitions.wait', newStatus: 'WAITING', icon: PauseCircle },
+    { labelKey: 'tickets.detail.transitions.resolved', newStatus: 'RESOLVED', icon: CheckCircle2 },
   ];
 }
 
@@ -438,11 +438,20 @@ function Meta({
   );
 }
 
-function MessageBubble({ msg, alignRight }: { msg: TicketMessage; alignRight: boolean }) {
-  const time = new Date(msg.createdAt).toLocaleTimeString('ru-RU', {
+function MessageBubble({
+  msg,
+  alignRight,
+  language,
+}: {
+  msg: TicketMessage;
+  alignRight: boolean;
+  language: string;
+}) {
+  const { t } = useTranslation();
+  const time = new Intl.DateTimeFormat(language, {
     hour: '2-digit',
     minute: '2-digit',
-  });
+  }).format(new Date(msg.createdAt));
   const avatarUser = {
     id: msg.author.id,
     name: msg.author.name,
@@ -460,7 +469,7 @@ function MessageBubble({ msg, alignRight }: { msg: TicketMessage; alignRight: bo
           <div className="rounded-sm border-l-2 border-warning bg-warning/10 px-3.5 py-2.5 text-sm text-foreground max-w-[85%]">
             <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-warning mb-1.5">
               <Lock className="h-2.5 w-2.5" />
-              Внутренняя заметка
+              {t('tickets.detail.internalNote')}
             </div>
             <div className="whitespace-pre-line">{msg.content}</div>
           </div>

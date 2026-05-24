@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Bell,
   CheckCheck,
@@ -16,7 +17,7 @@ import { useNotifStore, type Notification } from '../../store/notifStore';
 import { PageHeader } from '../../components/page-header';
 import { EmptyState } from '../../components/empty-state';
 import { Button } from '../../components/ui/button';
-import { formatRelativeRu } from '../../lib/mappers';
+import { formatRelative } from '../../lib/locale';
 import { cn } from '../../lib/utils';
 
 const TYPE_ICON: Record<string, { icon: LucideIcon; tone: string }> = {
@@ -28,6 +29,7 @@ const TYPE_ICON: Record<string, { icon: LucideIcon; tone: string }> = {
 };
 
 export default function NotificationsPage() {
+  const { t, i18n } = useTranslation();
   const { notifications, unreadCount, setNotifications, markRead, markAllRead } = useNotifStore();
 
   useEffect(() => {
@@ -50,26 +52,26 @@ export default function NotificationsPage() {
     markAllRead();
     try {
       await api.put('/notifications/read-all');
-      toast.success('Все уведомления отмечены прочитанными');
+      toast.success(t('notifications.markAllSuccess'));
     } catch {
-      toast.error('Не удалось обновить статус');
+      toast.error(t('notifications.markAllError'));
     }
   };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <PageHeader
-        title="Уведомления"
+        title={t('notifications.title')}
         description={
           unreadCount > 0
-            ? `${unreadCount} непрочитанных · ${notifications.length} всего`
-            : `${notifications.length} уведомлений`
+            ? t('notifications.unreadSummary', { unread: unreadCount, total: notifications.length })
+            : t('notifications.totalSummary', { total: notifications.length })
         }
       >
         {unreadCount > 0 && (
           <Button variant="outline" onClick={() => void handleMarkAllRead()}>
             <CheckCheck className="h-4 w-4 mr-1.5" />
-            Прочитать все
+            {t('notifications.markAll')}
           </Button>
         )}
       </PageHeader>
@@ -77,8 +79,8 @@ export default function NotificationsPage() {
       {notifications.length === 0 ? (
         <EmptyState
           icon={Bell}
-          title="Пока нет уведомлений"
-          description="Как только появятся новые сообщения, назначения или изменения статусов — они отобразятся здесь."
+          title={t('notifications.emptyTitle')}
+          description={t('notifications.emptyDescription')}
         />
       ) : (
         <ul className="rounded-md border border-border bg-card overflow-hidden">
@@ -106,7 +108,7 @@ export default function NotificationsPage() {
                     {!n.read && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">
                         <CircleDot className="h-2 w-2" />
-                        Новое
+                        {t('common.new')}
                       </span>
                     )}
                   </div>
@@ -114,7 +116,7 @@ export default function NotificationsPage() {
                     {n.message}
                   </div>
                   <div className="mt-1.5 text-[11px] text-muted-foreground/70 font-mono tabular-nums">
-                    {formatRelativeRu(n.createdAt)}
+                    {formatRelative(n.createdAt, i18n.language, t)}
                   </div>
                 </div>
               </div>

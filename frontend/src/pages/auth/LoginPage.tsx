@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/authStore';
 import { api } from '@/api/axios';
 import { Brand } from '@/components/brand';
@@ -18,13 +19,14 @@ interface LoginResponse {
   };
 }
 
-const DEMO: { label: string; email: string; password: string }[] = [
-  { label: 'Админ', email: 'admin@aitudesk.kz', password: 'Admin123!' },
-  { label: 'Агент', email: 'agent1@aitudesk.kz', password: 'Agent123!' },
-  { label: 'Пользователь', email: 'user1@aitudesk.kz', password: 'User123!' },
+const DEMO: { labelKey: string; email: string; password: string }[] = [
+  { labelKey: 'auth.login.demo.admin', email: 'admin@aitudesk.kz', password: 'Admin123!' },
+  { labelKey: 'auth.login.demo.agent', email: 'agent1@aitudesk.kz', password: 'Agent123!' },
+  { labelKey: 'auth.login.demo.user', email: 'user1@aitudesk.kz', password: 'User123!' },
 ];
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [showPass, setShowPass] = React.useState(false);
@@ -37,14 +39,14 @@ export default function LoginPage() {
     try {
       const res = await api.post<LoginResponse>('/auth/login', { email: e, password: p });
       setAuth(res.data.user, res.data.accessToken);
-      toast.success('Вход выполнен');
+      toast.success(t('auth.login.success'));
       navigate('/dashboard');
     } catch (err) {
       const status = (err as { response?: { status?: number } }).response?.status;
-      if (status === 401) toast.error('Неверный email или пароль');
-      else if (status === 400) toast.error('Проверьте формат email и пароля');
-      else if (status === 429) toast.error('Слишком много попыток. Подождите минуту.');
-      else toast.error('Не удалось войти. Сервер не отвечает.');
+      if (status === 401) toast.error(t('auth.login.errors.invalid'));
+      else if (status === 400) toast.error(t('auth.login.errors.format'));
+      else if (status === 429) toast.error(t('auth.login.errors.rateLimit'));
+      else toast.error(t('auth.login.errors.server'));
     } finally {
       setLoading(null);
     }
@@ -77,14 +79,13 @@ export default function LoginPage() {
         <div className="relative z-10 px-14">
           <div className="max-w-[28ch]">
             <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-background/55">
-              — Передовая статья
+              {t('auth.login.heroEyebrow')}
             </p>
             <h1 className="mt-6 font-serif text-[54px] leading-[1.02] tracking-[-0.02em] text-balance">
-              Порядок в заявках — <em className="text-background/70">спокойствие</em> в работе.
+              {t('auth.login.heroTitleBefore')}<em className="text-background/70">{t('auth.login.heroTitleEm')}</em>{t('auth.login.heroTitleAfter')}
             </h1>
             <p className="mt-6 max-w-[38ch] text-[14px] leading-relaxed text-background/65 text-pretty">
-              AituDesk собирает все обращения в IT-отдел колледжа в одном месте: заявки, переписка,
-              база знаний и контроль SLA — без лишних инструментов и без хаоса в почте.
+              {t('auth.login.heroText')}
             </p>
           </div>
         </div>
@@ -92,12 +93,12 @@ export default function LoginPage() {
         <div className="relative z-10 px-14 pb-12">
           <div className="h-px bg-background/70" />
           <dl className="mt-5 grid grid-cols-3 gap-6">
-            <LedgerStat value="1 240" unit="заявок / мес." />
-            <LedgerStat value="2:18" unit="ср. решение, ч" />
+            <LedgerStat value="1 240" unit={t('auth.login.statTickets')} />
+            <LedgerStat value="2:18" unit={t('auth.login.statResolution')} />
             <LedgerStat value="98,4" unit="% SLA" />
           </dl>
           <div className="mt-8 text-[10px] uppercase tracking-[0.22em] text-background/45">
-            © 2026 AITU Engineering · Внутренняя система колледжа
+            {t('auth.login.footer')}
           </div>
         </div>
       </aside>
@@ -110,17 +111,17 @@ export default function LoginPage() {
 
           <div>
             <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              Вход в систему
+              {t('auth.login.eyebrow')}
             </div>
             <h2 className="mt-3 font-serif text-[36px] leading-[1.05] tracking-[-0.015em]">
-              Добро пожаловать.
+              {t('auth.login.title')}
             </h2>
             <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground text-pretty">
-              Используйте корпоративный email AITU — доступ синхронизируется с вашей учётной записью.
+              {t('auth.login.description')}
             </p>
 
             <form onSubmit={(e) => void handleSubmit(e)} className="mt-9 space-y-5">
-              <Field label="Корпоративный email" htmlFor="email">
+              <Field label={t('auth.login.corporateEmail')} htmlFor="email">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   id="email"
@@ -133,7 +134,7 @@ export default function LoginPage() {
                 />
               </Field>
 
-              <Field label="Пароль" htmlFor="password" hint="Забыли пароль?" hintHref="#">
+              <Field label={t('common.password')} htmlFor="password" hint={t('auth.login.forgotPassword')} hintHref="#">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   id="password"
@@ -141,14 +142,14 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Введите пароль"
+                  placeholder={t('auth.login.passwordPlaceholder')}
                   className="h-11 w-full rounded border border-border bg-card pl-10 pr-10 text-[14px] placeholder:text-muted-foreground/70 focus:outline-none focus:border-foreground/50"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass((v) => !v)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 grid h-7 w-7 place-items-center rounded text-muted-foreground hover:text-foreground"
-                  aria-label={showPass ? 'Скрыть пароль' : 'Показать пароль'}
+                  aria-label={showPass ? t('auth.login.hidePassword') : t('auth.login.showPassword')}
                 >
                   {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -160,7 +161,7 @@ export default function LoginPage() {
                   className="h-3.5 w-3.5 rounded border-border bg-background accent-primary"
                   defaultChecked
                 />
-                Запомнить меня на этом устройстве
+                {t('auth.login.remember')}
               </label>
 
               <Button
@@ -168,16 +169,16 @@ export default function LoginPage() {
                 disabled={loading !== null}
                 className="w-full h-11 rounded bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
               >
-                {loading === 'form' ? 'Входим...' : 'Войти'}
+                {loading === 'form' ? t('auth.login.submitting') : t('auth.login.submit')}
               </Button>
             </form>
 
             <div className="mt-10 flex items-center gap-3">
               <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground">
-                — или —
+                {t('auth.login.or')}
               </span>
               <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground">
-                Демо-доступ
+                {t('auth.login.demoAccess')}
               </span>
               <div className="flex-1 h-px bg-border" />
             </div>
@@ -186,7 +187,7 @@ export default function LoginPage() {
               {DEMO.map((d) => (
                 <DemoBtn
                   key={d.email}
-                  label={d.label}
+                  label={t(d.labelKey)}
                   onClick={() => void login(d.email, d.password, d.email)}
                   loading={loading === d.email}
                 />
@@ -195,12 +196,12 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-10 text-[13px] text-muted-foreground">
-            Нет учётной записи?{' '}
+            {t('auth.login.noAccount')}{' '}
             <Link
               to="/register"
               className="text-foreground underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground"
             >
-              Зарегистрироваться
+              {t('auth.login.register')}
             </Link>
           </p>
 

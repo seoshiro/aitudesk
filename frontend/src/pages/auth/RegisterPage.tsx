@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/authStore';
 import { api } from '@/api/axios';
 import { Brand } from '@/components/brand';
@@ -19,6 +20,7 @@ interface RegisterResponse {
 }
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [showPass, setShowPass] = React.useState(false);
@@ -30,20 +32,20 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password.length < 6) {
-      toast.error('Пароль должен быть не менее 6 символов');
+      toast.error(t('auth.register.passwordTooShort'));
       return;
     }
     setLoading(true);
     try {
       const res = await api.post<RegisterResponse>('/auth/register', { name, email, password });
       setAuth(res.data.user, res.data.accessToken);
-      toast.success('Добро пожаловать в AituDesk');
+      toast.success(t('auth.register.success'));
       navigate('/dashboard');
     } catch (err) {
       const status = (err as { response?: { status?: number } }).response?.status;
-      if (status === 409) toast.error('Этот email уже зарегистрирован');
-      else if (status === 400) toast.error('Проверьте имя, email и пароль (мин. 6 символов)');
-      else toast.error('Не удалось создать аккаунт. Попробуйте позже.');
+      if (status === 409) toast.error(t('auth.register.errors.emailExists'));
+      else if (status === 400) toast.error(t('auth.register.errors.badRequest'));
+      else toast.error(t('auth.register.errors.server'));
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,7 @@ export default function RegisterPage() {
           <div className="flex items-baseline justify-between">
             <Brand size="md" className="text-background" />
             <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-background/50 tabular-nums">
-              Регистрация · 2026
+              {t('auth.register.masthead')}
             </span>
           </div>
           <div className="mt-5 h-px bg-background/70" />
@@ -71,14 +73,13 @@ export default function RegisterPage() {
         <div className="relative z-10 px-14">
           <div className="max-w-[28ch]">
             <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-background/55">
-              — Приглашение
+              {t('auth.register.heroEyebrow')}
             </p>
             <h1 className="mt-6 font-serif text-[54px] leading-[1.02] tracking-[-0.02em] text-balance">
-              Одна учётная запись — <em className="text-background/70">весь IT-отдел</em>.
+              {t('auth.register.heroTitleBefore')}<em className="text-background/70">{t('auth.register.heroTitleEm')}</em>{t('auth.register.heroTitleAfter')}
             </h1>
             <p className="mt-6 max-w-[38ch] text-[14px] leading-relaxed text-background/65 text-pretty">
-              Создайте аккаунт через корпоративный email, чтобы отправлять заявки, читать базу
-              знаний и видеть статус своих обращений в реальном времени.
+              {t('auth.register.heroText')}
             </p>
           </div>
         </div>
@@ -86,11 +87,7 @@ export default function RegisterPage() {
         <div className="relative z-10 px-14 pb-12">
           <div className="h-px bg-background/70" />
           <ol className="mt-5 space-y-3 text-[13px] leading-snug text-background/70">
-            {[
-              'Единое окно заявок — принтер, Wi-Fi, 1С, доступы.',
-              'База знаний с инструкциями по типовым ошибкам.',
-              'Прозрачный SLA: статус, ответственный и срок решения.',
-            ].map((row, i) => (
+            {(t('auth.register.benefits', { returnObjects: true }) as string[]).map((row, i) => (
               <li key={row} className="flex gap-3">
                 <span className="font-mono text-[10px] tabular-nums text-background/45 pt-0.5">
                   0{i + 1}
@@ -113,20 +110,19 @@ export default function RegisterPage() {
 
           <div>
             <div className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              Создание аккаунта
+              {t('auth.register.eyebrow')}
             </div>
             <h2 className="mt-3 font-serif text-[36px] leading-[1.05] tracking-[-0.015em]">
-              Начнём с пары полей.
+              {t('auth.register.title')}
             </h2>
             <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground text-pretty">
-              Используйте корпоративный email, выданный колледжем — так мы сможем подтвердить вашу
-              принадлежность к AITU.
+              {t('auth.register.description')}
             </p>
 
             <form onSubmit={(e) => void handleSubmit(e)} className="mt-9 space-y-5">
               <LabeledInput
                 id="name"
-                label="Полное имя"
+                label={t('common.fullName')}
                 icon={User}
                 value={name}
                 onChange={setName}
@@ -134,7 +130,7 @@ export default function RegisterPage() {
               />
               <LabeledInput
                 id="email"
-                label="Корпоративный email"
+                label={t('auth.login.corporateEmail')}
                 type="email"
                 icon={Mail}
                 value={email}
@@ -143,7 +139,7 @@ export default function RegisterPage() {
               />
 
               <div>
-                <FieldLabel htmlFor="password">Пароль</FieldLabel>
+                <FieldLabel htmlFor="password">{t('common.password')}</FieldLabel>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
@@ -152,7 +148,7 @@ export default function RegisterPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Минимум 6 символов"
+                    placeholder={t('auth.register.passwordPlaceholder')}
                     className="h-11 w-full rounded border border-border bg-card pl-10 pr-10 text-[14px] placeholder:text-muted-foreground/70 focus:outline-none focus:border-foreground/50"
                   />
                   <button
@@ -165,7 +161,7 @@ export default function RegisterPage() {
                   </button>
                 </div>
                 <ul className="mt-3 grid grid-cols-2 gap-1.5 text-[11.5px] text-muted-foreground">
-                  {['Минимум 6 символов', 'Буквы и цифры', 'Уникальный пароль', 'Не делиться'].map(
+                  {(t('auth.register.passwordRules', { returnObjects: true }) as string[]).map(
                     (r) => (
                       <li key={r} className="flex items-center gap-1.5">
                         <Check className="h-3 w-3 text-success" />
@@ -183,19 +179,19 @@ export default function RegisterPage() {
                   className="mt-0.5 h-3.5 w-3.5 rounded border-border bg-background accent-primary"
                 />
                 <span>
-                  Я согласен с{' '}
+                  {t('auth.register.agreeBefore')}{' '}
                   <a
                     href="#"
                     className="text-foreground underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground"
                   >
-                    регламентом IT
+                    {t('auth.register.itPolicy')}
                   </a>{' '}
-                  и{' '}
+                  {t('auth.register.agreeMiddle')}{' '}
                   <a
                     href="#"
                     className="text-foreground underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground"
                   >
-                    политикой обработки данных
+                    {t('auth.register.dataPolicy')}
                   </a>
                   .
                 </span>
@@ -206,18 +202,18 @@ export default function RegisterPage() {
                 disabled={loading}
                 className="w-full h-11 rounded bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
               >
-                {loading ? 'Создаём аккаунт...' : 'Создать учётную запись'}
+                {loading ? t('auth.register.submitting') : t('auth.register.submit')}
               </Button>
             </form>
           </div>
 
           <p className="mt-10 text-[13px] text-muted-foreground">
-            Уже есть аккаунт?{' '}
+            {t('auth.register.hasAccount')}{' '}
             <Link
               to="/login"
               className="text-foreground underline underline-offset-4 decoration-foreground/30 hover:decoration-foreground"
             >
-              Войти
+              {t('auth.register.login')}
             </Link>
           </p>
         </div>

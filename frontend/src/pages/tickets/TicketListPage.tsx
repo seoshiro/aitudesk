@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
   ChevronDown,
@@ -22,30 +23,31 @@ import { UserAvatar } from '../../components/user-avatar';
 import { EmptyState } from '../../components/empty-state';
 import { Button } from '../../components/ui/button';
 import {
-  categoryLabels,
-  formatRelativeRu,
-  priorityLabels,
-  statusLabels,
+  getCategoryLabelKey,
+  getPriorityLabelKey,
+  getStatusLabelKey,
 } from '../../lib/mappers';
+import { formatRelative } from '../../lib/locale';
 import { cn } from '../../lib/utils';
 
 type StatusFilter = 'all' | TicketStatus;
 type PriorityFilter = 'all' | Priority;
 type CategoryFilter = 'all' | TicketCategory;
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: 'all', label: 'Все' },
-  { key: 'NEW', label: statusLabels.NEW },
-  { key: 'IN_PROGRESS', label: statusLabels.IN_PROGRESS },
-  { key: 'WAITING', label: statusLabels.WAITING },
-  { key: 'RESOLVED', label: statusLabels.RESOLVED },
-  { key: 'CLOSED', label: statusLabels.CLOSED },
+const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
+  { key: 'all', labelKey: 'common.all' },
+  { key: 'NEW', labelKey: getStatusLabelKey('NEW') },
+  { key: 'IN_PROGRESS', labelKey: getStatusLabelKey('IN_PROGRESS') },
+  { key: 'WAITING', labelKey: getStatusLabelKey('WAITING') },
+  { key: 'RESOLVED', labelKey: getStatusLabelKey('RESOLVED') },
+  { key: 'CLOSED', labelKey: getStatusLabelKey('CLOSED') },
 ];
 
 const PRIORITIES: Priority[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 const CATEGORIES: TicketCategory[] = ['HARDWARE', 'SOFTWARE', 'NETWORK', 'OTHER'];
 
 export default function TicketListPage() {
+  const { t, i18n } = useTranslation();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -103,32 +105,32 @@ export default function TicketListPage() {
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
       <PageHeader
-        title="Заявки"
-        description="Все обращения в IT-поддержку колледжа"
+        title={t('tickets.list.title')}
+        description={t('tickets.list.description')}
       >
         <Button asChild>
           <Link to="/tickets/create">
             <PlusCircle className="h-4 w-4 mr-2" />
-            Создать заявку
+            {t('common.createTicket')}
           </Link>
         </Button>
       </PageHeader>
 
       {/* Status tabs */}
       <div className="flex items-center gap-1 overflow-x-auto border-b border-border">
-        {STATUS_TABS.map((t) => {
-          const active = status === t.key;
-          const count = counts[t.key] ?? 0;
+        {STATUS_TABS.map((tab) => {
+          const active = status === tab.key;
+          const count = counts[tab.key] ?? 0;
           return (
             <button
-              key={t.key}
-              onClick={() => setStatus(t.key)}
+              key={tab.key}
+              onClick={() => setStatus(tab.key)}
               className={cn(
                 'relative inline-flex items-center gap-2 px-3 py-2.5 text-sm whitespace-nowrap transition-colors',
                 active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {t.label}
+              {t(tab.labelKey)}
               <span
                 className={cn(
                   'rounded-full px-1.5 text-[10px] font-medium tabular-nums border',
@@ -155,7 +157,7 @@ export default function TicketListPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             type="search"
-            placeholder="Поиск по номеру, теме или автору..."
+            placeholder={t('tickets.list.searchPlaceholder')}
             className="h-10 w-full rounded-md border border-border bg-card pl-10 pr-3 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
@@ -163,28 +165,28 @@ export default function TicketListPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <FilterSelect
             icon={Filter}
-            label="Приоритет"
+            label={t('tickets.list.priority')}
             value={priority}
             onChange={(v) => setPriority(v as PriorityFilter)}
             options={[
-              { value: 'all', label: 'Любой приоритет' },
-              ...PRIORITIES.map((p) => ({ value: p, label: priorityLabels[p] })),
+              { value: 'all', label: t('tickets.list.anyPriority') },
+              ...PRIORITIES.map((p) => ({ value: p, label: t(getPriorityLabelKey(p)) })),
             ]}
           />
           <FilterSelect
             icon={SlidersHorizontal}
-            label="Категория"
+            label={t('tickets.list.category')}
             value={category}
             onChange={(v) => setCategory(v as CategoryFilter)}
             options={[
-              { value: 'all', label: 'Все категории' },
-              ...CATEGORIES.map((c) => ({ value: c, label: categoryLabels[c] })),
+              { value: 'all', label: t('tickets.list.allCategories') },
+              ...CATEGORIES.map((c) => ({ value: c, label: t(getCategoryLabelKey(c)) })),
             ]}
           />
 
           {filtersDirty && (
             <Button variant="ghost" size="sm" onClick={resetFilters} className="text-xs">
-              Сбросить
+              {t('common.reset')}
             </Button>
           )}
         </div>
@@ -193,84 +195,84 @@ export default function TicketListPage() {
       {/* List */}
       {loading ? (
         <div className="rounded-md border border-border bg-card px-5 py-16 text-center text-[13px] text-muted-foreground">
-          Загружаем заявки...
+          {t('tickets.list.loading')}
         </div>
       ) : tickets.length === 0 && !filtersDirty ? (
         <EmptyState
           icon={Inbox}
-          title="Пока нет ни одной заявки"
-          description="Как только появится первое обращение, оно отобразится здесь."
-          action={{ label: 'Создать первую заявку', href: '/tickets/create' }}
+          title={t('tickets.list.emptyTitle')}
+          description={t('tickets.list.emptyDescription')}
+          action={{ label: t('tickets.list.emptyAction'), href: '/tickets/create' }}
         />
       ) : tickets.length === 0 ? (
         <EmptyState
           icon={Search}
-          title="Ничего не найдено"
-          description="Попробуйте изменить фильтры или сбросить поиск."
-          action={{ label: 'Сбросить фильтры', onClick: resetFilters }}
+          title={t('tickets.list.notFoundTitle')}
+          description={t('tickets.list.notFoundDescription')}
+          action={{ label: t('tickets.list.resetFilters'), onClick: resetFilters }}
         />
       ) : (
         <div className="rounded-md border border-border bg-card overflow-hidden">
           <div className="hidden md:grid grid-cols-[80px_140px_120px_1fr_180px_120px_100px] gap-4 px-5 py-3 border-b border-border bg-accent/30 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             <div>№</div>
-            <div>Статус</div>
-            <div>Приоритет</div>
-            <div>Заявка</div>
-            <div>Исполнитель</div>
+            <div>{t('tickets.list.columns.status')}</div>
+            <div>{t('tickets.list.columns.priority')}</div>
+            <div>{t('tickets.list.columns.ticket')}</div>
+            <div>{t('tickets.list.columns.assignee')}</div>
             <div>SLA</div>
-            <div className="text-right">Обновлена</div>
+            <div className="text-right">{t('tickets.list.columns.updated')}</div>
           </div>
 
           <ul>
-            {tickets.map((t) => (
-              <li key={t.id} className="border-b border-border last:border-b-0">
+            {tickets.map((ticket) => (
+              <li key={ticket.id} className="border-b border-border last:border-b-0">
                 <Link
-                  to={`/tickets/${t.id}`}
+                  to={`/tickets/${ticket.id}`}
                   className="group grid md:grid-cols-[80px_140px_120px_1fr_180px_120px_100px] grid-cols-1 gap-4 px-5 py-4 hover:bg-accent/40 transition-colors"
                 >
                   <div className="flex md:block items-center gap-2 font-mono text-xs text-muted-foreground tabular-nums">
-                    #{t.ticketNumber}
+                    #{ticket.ticketNumber}
                   </div>
                   <div>
-                    <StatusBadge status={t.status} />
+                    <StatusBadge status={ticket.status} />
                   </div>
                   <div>
-                    <PriorityBadge priority={t.priority} />
+                    <PriorityBadge priority={ticket.priority} />
                   </div>
                   <div className="min-w-0">
                     <div className="font-medium text-sm text-foreground group-hover:text-primary transition-colors truncate">
-                      {t.subject}
+                      {ticket.subject}
                     </div>
                     <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span className="truncate">{t.creator.name}</span>
+                      <span className="truncate">{ticket.creator.name}</span>
                       <span>·</span>
-                      <span>{categoryLabels[t.category]}</span>
+                      <span>{t(getCategoryLabelKey(ticket.category))}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 min-w-0">
-                    {t.assignee ? (
+                    {ticket.assignee ? (
                       <>
-                        <UserAvatar user={t.assignee} size={24} />
-                        <span className="text-xs truncate">{t.assignee.name}</span>
+                        <UserAvatar user={ticket.assignee} size={24} />
+                        <span className="text-xs truncate">{ticket.assignee.name}</span>
                       </>
                     ) : (
                       <span className="text-xs text-muted-foreground italic">
-                        Не назначен
+                        {t('common.notAssigned')}
                       </span>
                     )}
                   </div>
                   <div>
-                    {t.slaBreached ? (
+                    {ticket.slaBreached ? (
                       <span className="inline-flex items-center gap-1 rounded-md border border-danger/30 bg-danger/10 px-2 py-0.5 text-[11px] font-medium text-danger">
                         <AlertTriangle className="h-3 w-3" />
-                        Просрочен
+                        {t('tickets.list.slaBreached')}
                       </span>
                     ) : (
-                      <span className="text-xs text-success">В рамках</span>
+                      <span className="text-xs text-success">{t('tickets.list.slaOk')}</span>
                     )}
                   </div>
                   <div className="text-right text-xs text-muted-foreground tabular-nums font-mono">
-                    {formatRelativeRu(t.updatedAt)}
+                    {formatRelative(ticket.updatedAt, i18n.language, t)}
                   </div>
                 </Link>
               </li>
@@ -279,7 +281,7 @@ export default function TicketListPage() {
 
           <div className="flex items-center justify-between px-5 py-3 border-t border-border text-xs text-muted-foreground">
             <span>
-              Показано <span className="text-foreground font-medium">{tickets.length}</span> из {total}
+              {t('tickets.list.shown')} <span className="text-foreground font-medium">{tickets.length}</span> {t('tickets.list.of')} {total}
             </span>
           </div>
         </div>

@@ -1,7 +1,8 @@
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import {
-  statusLabels,
-  priorityLabels,
+  getStatusLabelKey,
+  getPriorityLabelKey,
   type BackendStatus,
   type BackendPriority,
 } from '@/lib/mappers';
@@ -38,6 +39,7 @@ export function StatusBadge({
   status: BackendStatus;
   className?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <span
       className={cn(
@@ -47,7 +49,7 @@ export function StatusBadge({
       )}
     >
       <span className={cn('h-1.5 w-1.5 rounded-full', statusDot[status])} />
-      {statusLabels[status]}
+      {t(getStatusLabelKey(status))}
     </span>
   );
 }
@@ -59,6 +61,7 @@ export function PriorityBadge({
   priority: BackendPriority;
   className?: string;
 }) {
+  const { t } = useTranslation();
   const isCritical = priority === 'CRITICAL';
   return (
     <span
@@ -69,7 +72,7 @@ export function PriorityBadge({
         className,
       )}
     >
-      {priorityLabels[priority]}
+      {t(getPriorityLabelKey(priority))}
     </span>
   );
 }
