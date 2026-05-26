@@ -16,15 +16,15 @@ AituDesk is built as a complete diploma-ready product rather than a mockup. It i
 
 ### Dashboard
 
-![AituDesk dashboard](docs/screenshots/dashboard.png)
+![AituDesk dashboard](https://raw.githubusercontent.com/seoshiro/aitudesk/master/docs/screenshots/dashboard.png)
 
 ### Tickets
 
-![AituDesk tickets](docs/screenshots/tickets.png)
+![AituDesk tickets](https://raw.githubusercontent.com/seoshiro/aitudesk/master/docs/screenshots/tickets.png)
 
 ### Knowledge Base
 
-![AituDesk knowledge base](docs/screenshots/knowledge-base-en.png)
+![AituDesk knowledge base](https://raw.githubusercontent.com/seoshiro/aitudesk/master/docs/screenshots/knowledge-base-en.png)
 
 ---
 
