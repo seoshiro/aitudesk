@@ -1,10 +1,85 @@
-# AituDesk — Service Desk для колледжа
+# AituDesk
 
-> Полнофункциональная веб-платформа для управления IT-заявками (тикетами) с реал-тайм чатом, SLA-контролем, ролевой моделью, мультиязычным интерфейсом, базой знаний RU/EN/KK, AI/RAG-ассистентом, мониторингом и PDF-отчётами.
+> Fullstack service desk platform for a college IT department: tickets, real-time chat, SLA control, multilingual knowledge base, AI/RAG support assistant, analytics, monitoring, and PDF reports.
 
-Проект состоит из Express/Prisma/Socket.IO бэкенда, React + Vite SPA фронтенда и PostgreSQL. Всё поднимается одной командой через Docker Compose.
+![React](https://img.shields.io/badge/React-18-2f6fed?style=flat-square)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-244a8f?style=flat-square)
+![Node](https://img.shields.io/badge/Node.js-20-1f7a4d?style=flat-square)
+![Prisma](https://img.shields.io/badge/Prisma-5-172033?style=flat-square)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-315f8c?style=flat-square)
+![Docker](https://img.shields.io/badge/Docker-Compose-1d63ed?style=flat-square)
+![i18n](https://img.shields.io/badge/i18n-RU%20%2F%20EN%20%2F%20KK-111827?style=flat-square)
+
+**Live demo:** [aitudesk.vercel.app](https://aitudesk.vercel.app)  
+**Backend health:** [aitudesk-backend.onrender.com/api/health](https://aitudesk-backend.onrender.com/api/health)  
+**Free deployment:** Vercel + Render Free + Neon Free, without Supabase.
+
+AituDesk is built as a complete diploma-ready product rather than a mockup. It includes a role-aware ticket workflow, Socket.IO updates, multilingual official Knowledge Base content, AI support routing, PDF reporting, Prometheus metrics, Grafana dashboards, and a polished editorial UI.
 
 ---
+
+## Preview
+
+### Dashboard
+
+![AituDesk dashboard](docs/screenshots/dashboard.png)
+
+### Tickets
+
+![AituDesk tickets](docs/screenshots/tickets.png)
+
+### Knowledge Base
+
+![AituDesk knowledge base](docs/screenshots/knowledge-base-en.png)
+
+---
+
+## Highlights
+
+- **Role-based workspace:** USER, AGENT, ADMIN with protected routes and API-level RBAC.
+- **Ticket lifecycle:** NEW, IN_PROGRESS, WAITING, RESOLVED, CLOSED, REOPENED.
+- **Real-time support chat:** public messages, internal agent notes, typing state, status updates.
+- **SLA engine:** response/resolve deadlines, waiting pause, breach detection, dashboard metrics.
+- **Multilingual UI:** Russian, English, Kazakh with i18next and localStorage persistence.
+- **Multilingual KB:** official articles stored in RU/EN/KK, localized API responses, no live auto-translation.
+- **AI/RAG assistant:** OpenAI-compatible provider, KB sources, IT-support scope routing, controlled fallbacks.
+- **Reports:** monthly PDF reports generated with pdf-lib and worker_threads.
+- **Monitoring:** Prometheus endpoint and Grafana provisioning for local/dev observability.
+- **Deployment-ready:** Docker Compose locally, Vercel/Render/Neon for free public hosting.
+
+---
+
+## Demo Accounts
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@aitudesk.kz` | `Admin123!` |
+| Agent | `agent1@aitudesk.kz` | `Agent123!` |
+| User | `user1@aitudesk.kz` | `User123!` |
+
+The seed script is idempotent. It creates base users, agents, SLA policies, demo tickets, and 24 multilingual KB articles without deleting existing user tickets/messages/ratings during ordinary startup.
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/seoshiro/aitudesk.git
+cd aitudesk
+docker compose up -d --build
+```
+
+Local URLs:
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:7754 |
+| Backend health | http://localhost:4829/api/health |
+| pgAdmin | http://localhost:5050 |
+| Prometheus | http://localhost:8800 |
+| Grafana | http://localhost:9911 |
+
+Production deployment instructions are in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Стек
 
