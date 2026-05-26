@@ -86,12 +86,12 @@ Fastest setup is the Render Blueprint button above. If you prefer manual setup:
 |---|---|
 | Root Directory | `backend` |
 | Runtime | Node |
-| Build Command | `npm install && npm run render:build` |
+| Build Command | `npm install --include=dev && npm run render:build` |
 | Start Command | `npm run start` |
 | Health Check Path | `/api/health` |
 | Plan | Free |
 
-`render:build` runs:
+`--include=dev` is intentional: Render has `NODE_ENV=production`, but TypeScript compilation still needs dev-only `@types/*` packages during build. `render:build` runs:
 
 ```bash
 prisma generate
