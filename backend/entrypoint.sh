@@ -2,7 +2,7 @@
 set -e
 
 echo "==> Pushing Prisma schema to database..."
-npx prisma db push --accept-data-loss
+npx prisma db push
 
 echo "==> Seeding database (idempotent)..."
 npx ts-node --compiler-options '{"module":"CommonJS"}' prisma/seed.ts
