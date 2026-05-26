@@ -25,10 +25,40 @@ Uploads are still stored on the backend filesystem. On Render Free this filesyst
 
 - `backend/.env.example` - safe backend env template.
 - `frontend/.env.example` - safe frontend env template.
+- `vercel.json` - root-level Vercel config, so you can import the repo without setting `frontend` as Root Directory.
 - `frontend/vercel.json` - SPA fallback for React Router deep links.
 - `render.yaml` - optional Render Blueprint for the backend.
 - `backend/package.json` - `render:build`, `db:push`, `deploy:start` scripts.
 - `backend/src/lib/env.ts` - centralized CORS/JWT/cookie environment helpers.
+
+## Fastest Manual Path
+
+This is the shortest safe flow:
+
+1. Create Neon PostgreSQL and copy `DATABASE_URL`.
+2. Deploy the backend with the Render Blueprint:
+
+   [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/seoshiro/aitudesk)
+
+   Fill `DATABASE_URL`, seed passwords, and optional `AI_API_KEY`. Render generates JWT secrets automatically.
+3. Deploy the frontend on Vercel from the same repo. You can import the repo root directly because root `vercel.json` builds `frontend`.
+4. Set Vercel env:
+
+```env
+VITE_API_URL=https://your-backend.onrender.com/api
+VITE_SOCKET_URL=https://your-backend.onrender.com
+```
+
+5. Copy the final Vercel URL back to Render:
+
+```env
+FRONTEND_URL=https://your-frontend.vercel.app
+CORS_ORIGIN=https://your-frontend.vercel.app
+```
+
+6. Redeploy backend once.
+
+The final Render redeploy is intentionally kept: it preserves strict CORS instead of allowing every `*.vercel.app` site.
 
 ## 1. Create Neon PostgreSQL
 
@@ -45,7 +75,7 @@ A pooled Neon URL is usually fine for runtime. If you later introduce Prisma mig
 
 ## 2. Deploy Backend To Render
 
-Recommended manual setup:
+Fastest setup is the Render Blueprint button above. If you prefer manual setup:
 
 1. Go to https://render.com.
 2. New -> Web Service.
@@ -117,7 +147,17 @@ AI_MODEL=openrouter/auto
 
 1. Go to https://vercel.com.
 2. New Project -> import the same GitHub repo.
-3. Configure:
+3. Keep the repo root as the project root. The root `vercel.json` already tells Vercel to install, build, and publish `frontend`.
+
+Settings are auto-defined by `vercel.json`:
+
+| Setting | Value |
+|---|---|
+| Install Command | `npm install --prefix frontend` |
+| Build Command | `npm run build --prefix frontend` |
+| Output Directory | `frontend/dist` |
+
+Alternative manual setup, if you choose `frontend` as Root Directory:
 
 | Setting | Value |
 |---|---|
@@ -216,6 +256,12 @@ Local URLs:
 - Grafana: http://localhost:9911
 
 ## Useful Commands
+
+One-command preflight from the repo root:
+
+```bash
+npm run deploy:check
+```
 
 Backend local validation:
 

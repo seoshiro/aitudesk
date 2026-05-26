@@ -2,6 +2,9 @@
   "name": "aitudesk-frontend",
   "version": "2.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

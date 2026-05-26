@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "AituDesk Service Desk — Backend API",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
