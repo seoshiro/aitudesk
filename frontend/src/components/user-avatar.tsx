@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { colorFromString, initialsOf } from '@/lib/mappers';
+import { resolveAssetUrl } from '@/lib/asset-url';
 
 export interface AvatarUser {
   name: string;
@@ -27,13 +29,10 @@ export function UserAvatar({
   size?: number;
   className?: string;
 }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const base = colorFromString(user.id ?? user.email ?? user.name);
   const fs = Math.round(size * 0.38);
-  const url = user.avatarUrl
-    ? user.avatarUrl.startsWith('http') || user.avatarUrl.startsWith('/')
-      ? user.avatarUrl
-      : `/${user.avatarUrl}`
-    : null;
+  const url = imageFailed ? null : resolveAssetUrl(user.avatarUrl);
 
   return (
     <span
@@ -46,9 +45,7 @@ export function UserAvatar({
           src={url}
           alt={user.name}
           className="h-full w-full rounded-full object-cover"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
-          }}
+          onError={() => setImageFailed(true)}
         />
       ) : (
         <span
