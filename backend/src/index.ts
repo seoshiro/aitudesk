@@ -24,35 +24,18 @@ import './lib/dbMetrics'; // registers DB-derived gauges (Database Exporter patt
 import { reportsRouter } from './routes/reports';
 import { aiRouter } from './routes/ai';
 import { checkSlaBreaches } from './services/sla.service';
+import { isOriginAllowed } from './lib/env';
 
 const app = express();
 const httpServer = createServer(app);
 
 // ── Middleware ──────────────────────────────────────────────────────────────
+app.set('trust proxy', 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-const EXTRA_ORIGINS = (process.env.EXTRA_CORS_ORIGINS ?? '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const ALLOWED_ORIGINS = [
-  process.env.FRONTEND_URL ?? 'http://localhost:5173',
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://localhost:7754',
-  'http://localhost:80',
-  'http://localhost',
-  ...EXTRA_ORIGINS,
-];
-
-// Allow any localhost / 127.0.0.1 / 0.0.0.0 origin on any port (dev + IDE browser previews)
-const LOCAL_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i;
 
 app.use(cors({
   origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
-    // Allow same-origin requests (Nginx proxy sends no Origin header)
-    if (!origin) return cb(null, true);
-    if (ALLOWED_ORIGINS.includes(origin) || LOCAL_ORIGIN_RE.test(origin)) return cb(null, true);
+    if (isOriginAllowed(origin)) return cb(null, true);
     cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
@@ -66,7 +49,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // ── Static files ────────────────────────────────────────────────────────────
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {
+const UPLOAD_DIR = path.resolve(process.cwd(), process.env.UPLOAD_DIR ?? 'uploads');
+app.use('/uploads', express.static(UPLOAD_DIR, {
   setHeaders: (res) => { res.set('Cross-Origin-Resource-Policy', 'cross-origin'); }
 }));
 

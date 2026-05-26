@@ -5,11 +5,12 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
+import { getAccessTokenSecret, getRefreshCookieOptions, getRefreshTokenSecret } from '../lib/env';
 
 export const authRouter = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET ?? 'secret';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? 'refresh_secret';
+const JWT_SECRET = getAccessTokenSecret();
+const JWT_REFRESH_SECRET = getRefreshTokenSecret();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '15m';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN ?? '7d';
 
@@ -43,7 +44,7 @@ authRouter.post('/register', validate(RegisterSchema), async (req, res: Response
   const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000);
   await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt } });
 
-  res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', expires: expiresAt });
+  res.cookie('refreshToken', refreshToken, getRefreshCookieOptions(expiresAt));
   res.status(201).json({ accessToken, user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl } });
 });
 
@@ -60,7 +61,7 @@ authRouter.post('/login', validate(LoginSchema), async (req, res: Response) => {
   const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000);
   await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt } });
 
-  res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', expires: expiresAt });
+  res.cookie('refreshToken', refreshToken, getRefreshCookieOptions(expiresAt));
   res.json({ accessToken, user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl } });
 });
 
@@ -79,7 +80,7 @@ authRouter.post('/refresh', async (req, res: Response) => {
     const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000);
     await prisma.refreshToken.create({ data: { token: newRefresh, userId: payload.userId, expiresAt } });
 
-    res.cookie('refreshToken', newRefresh, { httpOnly: true, sameSite: 'lax', expires: expiresAt });
+    res.cookie('refreshToken', newRefresh, getRefreshCookieOptions(expiresAt));
     const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { id: true, name: true, email: true, role: true, avatarUrl: true } });
     res.json({ accessToken, user });
   } catch {
@@ -91,6 +92,6 @@ authRouter.post('/refresh', async (req, res: Response) => {
 authRouter.post('/logout', authenticate, async (req, res: Response) => {
   const token = (req.cookies as Record<string, string>)['refreshToken'];
   if (token) await prisma.refreshToken.deleteMany({ where: { token } });
-  res.clearCookie('refreshToken');
+  res.clearCookie('refreshToken', getRefreshCookieOptions());
   res.json({ message: 'Logged out' });
 });

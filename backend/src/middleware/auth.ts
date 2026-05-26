@@ -2,12 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
 import { Role } from '@prisma/client';
+import { getAccessTokenSecret } from '../lib/env';
 
 export interface AuthRequest extends Request {
   user?: { id: string; email: string; role: Role; name: string };
 }
-
-const JWT_SECRET = process.env.JWT_SECRET ?? 'fallback_secret';
 
 export const authenticate = async (
   req: AuthRequest, res: Response, next: NextFunction
@@ -20,7 +19,7 @@ export const authenticate = async (
 
   const token = authHeader.slice(7);
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const payload = jwt.verify(token, getAccessTokenSecret()) as { userId: string };
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       select: { id: true, email: true, role: true, name: true },

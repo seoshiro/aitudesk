@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
+import { getAccessTokenSecret, isOriginAllowed } from '../lib/env';
 
 interface SocketUser {
   userId: string;
@@ -14,26 +15,10 @@ let io: Server;
 export function getIo(): Server { return io; }
 
 export function initSocket(httpServer: HttpServer): void {
-  const EXTRA = (process.env.EXTRA_CORS_ORIGINS ?? '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const ALLOWED_ORIGINS = [
-    process.env.FRONTEND_URL ?? 'http://localhost:5173',
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:7754',
-    'http://localhost:80',
-    'http://localhost',
-    ...EXTRA,
-  ];
-  const LOCAL_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i;
-
   io = new Server(httpServer, {
     cors: {
       origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
-        if (!origin) return cb(null, true);
-        if (ALLOWED_ORIGINS.includes(origin) || LOCAL_ORIGIN_RE.test(origin)) return cb(null, true);
+        if (isOriginAllowed(origin)) return cb(null, true);
         cb(new Error(`Socket.IO CORS blocked: ${origin}`));
       },
       credentials: true,
@@ -45,7 +30,7 @@ export function initSocket(httpServer: HttpServer): void {
     const token = socket.handshake.auth['token'] as string | undefined;
     if (!token) return next(new Error('Authentication required'));
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET ?? '') as { userId: string };
+      const payload = jwt.verify(token, getAccessTokenSecret()) as { userId: string };
       (socket.data as SocketUser & { userId: string }).userId = payload.userId;
       next();
     } catch {
