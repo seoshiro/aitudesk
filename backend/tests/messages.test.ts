@@ -44,6 +44,39 @@ describe('GET /api/tickets/:id/messages', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('returns 403 when USER reads another users ticket messages', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(TEST_USER);
+    prismaMock.ticket.findUnique.mockResolvedValue({
+      ...SAMPLE_TICKET,
+      creatorId: 'someone-else',
+      assigneeId: TEST_AGENT.id,
+      status: 'IN_PROGRESS',
+    });
+
+    const res = await request(app)
+      .get(`/api/tickets/${SAMPLE_TICKET.id}/messages`)
+      .set(authHeader(userToken));
+
+    expect(res.status).toBe(403);
+    expect(prismaMock.ticketMessage.findMany).not.toHaveBeenCalled();
+  });
+
+  it('returns 403 when AGENT reads an assigned ticket owned by another agent', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(TEST_AGENT);
+    prismaMock.ticket.findUnique.mockResolvedValue({
+      ...SAMPLE_TICKET,
+      assigneeId: 'other-agent-id',
+      status: 'IN_PROGRESS',
+    });
+
+    const res = await request(app)
+      .get(`/api/tickets/${SAMPLE_TICKET.id}/messages`)
+      .set(authHeader(agentToken));
+
+    expect(res.status).toBe(403);
+    expect(prismaMock.ticketMessage.findMany).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /api/tickets/:id/messages', () => {
@@ -104,5 +137,23 @@ describe('POST /api/tickets/:id/messages', () => {
       .field('content', 'Hello');
 
     expect(res.status).toBe(404);
+  });
+
+  it('returns 403 when USER posts to another users ticket', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(TEST_USER);
+    prismaMock.ticket.findUnique.mockResolvedValue({
+      ...SAMPLE_TICKET,
+      creatorId: 'someone-else',
+      assigneeId: TEST_AGENT.id,
+      status: 'IN_PROGRESS',
+    });
+
+    const res = await request(app)
+      .post(`/api/tickets/${SAMPLE_TICKET.id}/messages`)
+      .set(authHeader(userToken))
+      .field('content', 'I should not be here');
+
+    expect(res.status).toBe(403);
+    expect(prismaMock.ticketMessage.create).not.toHaveBeenCalled();
   });
 });

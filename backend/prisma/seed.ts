@@ -476,9 +476,9 @@ async function main(): Promise<void> {
   console.log('🌱 Seed completed successfully!');
   console.log('');
   console.log('📋 Test accounts:');
-  console.log(`   Admin: admin@aitudesk.kz / ${ADMIN_PASSWORD}`);
-  console.log(`   Agents: agent1-3@aitudesk.kz / ${AGENT_PASSWORD}`);
-  console.log(`   Users: user1-5@aitudesk.kz / ${USER_PASSWORD}`);
+  console.log('   Admin: admin@aitudesk.kz / configured seed password');
+  console.log('   Agents: agent1-3@aitudesk.kz / configured seed password');
+  console.log('   Users: user1-5@aitudesk.kz / configured seed password');
 }
 
 main()

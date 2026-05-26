@@ -122,6 +122,40 @@ describe('GET /api/tickets/:id', () => {
 
     expect(res.status).toBe(403);
   });
+
+  it('returns 403 when AGENT tries to access another agents active ticket', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(TEST_AGENT);
+    prismaMock.ticket.findUnique.mockResolvedValue({
+      ...SAMPLE_TICKET,
+      assignee: { id: 'other-agent-id', name: 'Other Agent', email: 'other@test.com', avatarUrl: null },
+      assigneeId: 'other-agent-id',
+      status: 'IN_PROGRESS',
+      attachments: [],
+    });
+
+    const res = await request(app)
+      .get(`/api/tickets/${SAMPLE_TICKET.id}`)
+      .set(authHeader(agentToken));
+
+    expect(res.status).toBe(403);
+  });
+
+  it('allows AGENT to access an unassigned NEW ticket', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(TEST_AGENT);
+    prismaMock.ticket.findUnique.mockResolvedValue({
+      ...SAMPLE_TICKET,
+      assignee: null,
+      assigneeId: null,
+      status: 'NEW',
+      attachments: [],
+    });
+
+    const res = await request(app)
+      .get(`/api/tickets/${SAMPLE_TICKET.id}`)
+      .set(authHeader(agentToken));
+
+    expect(res.status).toBe(200);
+  });
 });
 
 describe('POST /api/tickets', () => {
@@ -198,6 +232,23 @@ describe('PUT /api/tickets/:id/status', () => {
       .send({ status: 'IN_PROGRESS' });
 
     expect(res.status).toBe(200);
+  });
+
+  it('agent can take an unassigned NEW ticket', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(TEST_AGENT);
+    prismaMock.ticket.findUnique.mockResolvedValue({ ...SAMPLE_TICKET, status: 'NEW', assigneeId: null });
+    prismaMock.ticket.update.mockResolvedValue({ ...SAMPLE_TICKET, status: 'IN_PROGRESS', assigneeId: TEST_AGENT.id });
+    prismaMock.notification.create.mockResolvedValue({ id: 'n-take' });
+
+    const res = await request(app)
+      .put(`/api/tickets/${SAMPLE_TICKET.id}/status`)
+      .set(authHeader(agentToken))
+      .send({ status: 'IN_PROGRESS' });
+
+    expect(res.status).toBe(200);
+    expect(prismaMock.ticket.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: 'IN_PROGRESS', assigneeId: TEST_AGENT.id }),
+    }));
   });
 
   it('agent can set RESOLVED', async () => {

@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   Clock,
+  Download,
   Lock,
   MapPin,
   Paperclip,
@@ -25,6 +26,7 @@ import { StatusBadge, PriorityBadge } from '../../components/ticket-badges';
 import { UserAvatar } from '../../components/user-avatar';
 import { getCategoryLabelKey } from '../../lib/mappers';
 import { formatDateTime, formatRelative } from '../../lib/locale';
+import { resolveAssetUrl } from '../../lib/asset-url';
 import { cn } from '../../lib/utils';
 import {
   connectSocket,
@@ -43,11 +45,13 @@ export default function TicketDetailPage() {
   const [messages, setMessages]   = useState<TicketMessage[]>([]);
   const [content, setContent]     = useState('');
   const [internal, setInternal]   = useState(false);
+  const [messageFiles, setMessageFiles] = useState<File[]>([]);
   const [sending, setSending]     = useState(false);
   const [typingName, setTypingName] = useState('');
   const [rating, setRating]       = useState(0);
   const [showRating, setShowRating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageFileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadAll = useCallback(async () => {
@@ -107,8 +111,9 @@ export default function TicketDetailPage() {
   };
 
   const handleSend = async () => {
-    if (!ticket || !content.trim()) return;
+    if (!ticket || (!content.trim() && messageFiles.length === 0)) return;
     setSending(true);
+    const files = messageFiles;
     const optimistic: TicketMessage = {
       id: 'tmp-' + Date.now(),
       content: content.trim(),
@@ -119,10 +124,17 @@ export default function TicketDetailPage() {
     };
     setMessages(prev => [...prev, optimistic]);
     setContent('');
+    setMessageFiles([]);
     try {
-      await api.post(`/tickets/${ticket.id}/messages`, { content: optimistic.content, type: optimistic.type });
+      const formData = new FormData();
+      formData.append('content', optimistic.content);
+      formData.append('type', optimistic.type);
+      files.forEach((file) => formData.append('attachments', file));
+      const r = await api.post<TicketMessage>(`/tickets/${ticket.id}/messages`, formData);
+      setMessages(prev => prev.map(m => m.id === optimistic.id ? r.data : m));
     } catch {
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+      setMessageFiles(files);
       toast.error(t('tickets.detail.sendError'));
     } finally {
       setSending(false);
@@ -240,6 +252,13 @@ export default function TicketDetailPage() {
             </p>
           </div>
 
+          {ticket.attachments && ticket.attachments.length > 0 && (
+            <div className="rounded-md border border-border bg-card p-6">
+              <h2 className="text-sm font-semibold">{t('tickets.detail.attachments')}</h2>
+              <AttachmentList attachments={ticket.attachments} />
+            </div>
+          )}
+
           {showRating && (
             <div className="rounded-md border border-primary/30 bg-primary/5 p-6">
               <h3 className="text-sm font-semibold">{t('tickets.detail.rateTitle')}</h3>
@@ -341,11 +360,23 @@ export default function TicketDetailPage() {
                 <div className="flex items-end gap-2">
                   <button
                     type="button"
+                    onClick={() => messageFileInputRef.current?.click()}
                     className="grid h-9 w-9 place-items-center rounded-md border border-border bg-background hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
                     aria-label={t('tickets.detail.attach')}
                   >
                     <Paperclip className="h-4 w-4" />
                   </button>
+                  <input
+                    ref={messageFileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.files ?? []).slice(0, 5);
+                      setMessageFiles(selected);
+                      e.target.value = '';
+                    }}
+                  />
                   <textarea
                     value={content}
                     onChange={(e) => handleTyping(e.target.value)}
@@ -371,6 +402,22 @@ export default function TicketDetailPage() {
                 <div className="mt-1.5 text-[10px] text-muted-foreground/70">
                   {t('tickets.detail.composerHint')}
                 </div>
+                {messageFiles.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {messageFiles.map((file) => (
+                      <button
+                        key={`${file.name}-${file.size}`}
+                        type="button"
+                        onClick={() => setMessageFiles((prev) => prev.filter((item) => item !== file))}
+                        className="inline-flex max-w-full items-center gap-1 rounded-sm border border-border bg-background px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground"
+                        aria-label={t('tickets.detail.removeAttachment', { name: file.name })}
+                      >
+                        <Paperclip className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{file.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </form>
             )}
           </div>
@@ -457,6 +504,7 @@ function MessageBubble({
     name: msg.author.name,
     avatarUrl: msg.author.avatarUrl ?? null,
   };
+  const hasAttachments = Boolean(msg.attachments?.length);
 
   if (msg.type === 'INTERNAL') {
     return (
@@ -472,6 +520,7 @@ function MessageBubble({
               {t('tickets.detail.internalNote')}
             </div>
             <div className="whitespace-pre-line">{msg.content}</div>
+            {hasAttachments && <AttachmentList attachments={msg.attachments!} compact />}
           </div>
           <div className="mt-1 text-[10px] text-muted-foreground/70">{time}</div>
         </div>
@@ -495,6 +544,7 @@ function MessageBubble({
           )}
         >
           {msg.content}
+          {hasAttachments && <AttachmentList attachments={msg.attachments!} compact inverted={alignRight} />}
         </div>
         <div
           className={cn(
@@ -507,4 +557,51 @@ function MessageBubble({
       </div>
     </div>
   );
+}
+
+function AttachmentList({
+  attachments,
+  compact = false,
+  inverted = false,
+}: {
+  attachments: NonNullable<Ticket['attachments']>;
+  compact?: boolean;
+  inverted?: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className={cn('space-y-2', compact ? 'mt-2' : 'mt-3')}>
+      {attachments.map((attachment) => {
+        const href = resolveAssetUrl(attachment.url) ?? attachment.url;
+        return (
+          <a
+            key={attachment.id}
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              'flex items-center gap-2 rounded-sm border px-3 py-2 text-xs transition-colors',
+              compact ? 'max-w-[260px]' : 'max-w-xl',
+              inverted
+                ? 'border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/15'
+                : 'border-border bg-background text-foreground hover:bg-secondary',
+            )}
+          >
+            <Paperclip className="h-3.5 w-3.5 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">{attachment.filename}</span>
+            <span className={cn('shrink-0 font-mono', inverted ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+              {formatAttachmentSize(attachment.size, t)}
+            </span>
+            <Download className="h-3.5 w-3.5 shrink-0 opacity-70" />
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatAttachmentSize(size: number, t: ReturnType<typeof useTranslation>['t']): string {
+  if (size < 1024) return `${size} ${t('tickets.create.bytes')}`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} ${t('tickets.create.kilobytes')}`;
+  return `${(size / (1024 * 1024)).toFixed(1)} ${t('tickets.create.megabytes')}`;
 }

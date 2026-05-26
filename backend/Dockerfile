@@ -26,7 +26,7 @@ ENV NODE_ENV=production
 # Copy package files and install ALL deps (we need ts-node + typescript for seed)
 COPY package*.json ./
 COPY tsconfig.json ./
-RUN npm ci
+RUN npm ci --include=dev
 
 # Copy compiled output
 COPY --from=builder /app/dist ./dist

@@ -1,10 +1,12 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import { Priority, TicketCategory } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { upload } from '../middleware/upload';
+import { canAccessTicket } from '../lib/ticketAccess';
 import { calculateSlaDeadlines } from '../services/sla.service';
 import { autoAssignTicket } from '../services/assignment.service';
 import { emitNotification, emitToTicket } from '../socket';
@@ -31,36 +33,62 @@ const CreateTicketSchema = z.object({
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
 });
 
+const UpdateStatusSchema = z.object({
+  status: z.enum(['NEW', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED', 'REOPENED']),
+});
+
+const STATUS_VALUES = ['NEW', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED', 'REOPENED'] as const;
+const CATEGORY_VALUES = ['HARDWARE', 'SOFTWARE', 'NETWORK', 'OTHER'] as const;
+const PRIORITY_VALUES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+const SORT_FIELDS = ['ticketNumber', 'subject', 'category', 'priority', 'status', 'createdAt', 'updatedAt'] as const;
+
+function parseEnum<T extends readonly string[]>(value: string | undefined, allowed: T): T[number] | undefined {
+  return value && (allowed as readonly string[]).includes(value) ? value as T[number] : undefined;
+}
+
 // GET /api/tickets
 ticketsRouter.get('/', async (req: AuthRequest, res: Response) => {
   const { status, category, priority, assigneeId, search, page = '1', limit = '20', sort = 'createdAt', order = 'desc' } = req.query as Record<string, string>;
 
-  const where: Record<string, unknown> = {};
-  if (req.user!.role === 'USER') where['creatorId'] = req.user!.id;
+  const and: Prisma.TicketWhereInput[] = [];
+  if (req.user!.role === 'USER') and.push({ creatorId: req.user!.id });
   if (req.user!.role === 'AGENT') {
-    where['OR'] = [
-      { assigneeId: req.user!.id },
-      { assigneeId: null, status: 'NEW' },
-    ];
+    and.push({
+      OR: [
+        { assigneeId: req.user!.id },
+        { assigneeId: null, status: 'NEW' },
+      ],
+    });
   }
-  if (status) where['status'] = status;
-  if (category) where['category'] = category;
-  if (priority) where['priority'] = priority;
-  if (assigneeId) where['assigneeId'] = assigneeId;
-  if (search) where['OR'] = [
-    { subject: { contains: search, mode: 'insensitive' } },
-    { description: { contains: search, mode: 'insensitive' } },
-  ];
 
-  const pageNum = parseInt(page, 10);
-  const limitNum = parseInt(limit, 10);
+  const statusFilter = parseEnum(status, STATUS_VALUES);
+  const categoryFilter = parseEnum(category, CATEGORY_VALUES);
+  const priorityFilter = parseEnum(priority, PRIORITY_VALUES);
+  if (statusFilter) and.push({ status: statusFilter });
+  if (categoryFilter) and.push({ category: categoryFilter });
+  if (priorityFilter) and.push({ priority: priorityFilter });
+  if (assigneeId && req.user!.role === 'ADMIN') and.push({ assigneeId });
+  if (search?.trim()) {
+    and.push({
+      OR: [
+        { subject: { contains: search.trim(), mode: 'insensitive' } },
+        { description: { contains: search.trim(), mode: 'insensitive' } },
+      ],
+    });
+  }
+
+  const where: Prisma.TicketWhereInput = and.length > 0 ? { AND: and } : {};
+  const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+  const limitNum = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
   const skip = (pageNum - 1) * limitNum;
+  const sortField = parseEnum(sort, SORT_FIELDS) ?? 'createdAt';
+  const sortOrder = order === 'asc' ? 'asc' : 'desc';
 
   const [tickets, total] = await Promise.all([
     prisma.ticket.findMany({
       where,
       select: TICKET_SELECT,
-      orderBy: { [sort]: order },
+      orderBy: { [sortField]: sortOrder },
       skip,
       take: limitNum,
     }),
@@ -77,7 +105,7 @@ ticketsRouter.get('/:id', async (req: AuthRequest, res: Response) => {
     select: { ...TICKET_SELECT, attachments: { select: { id: true, filename: true, url: true, size: true, mimetype: true } } },
   });
   if (!ticket) { res.status(404).json({ error: 'Ticket not found' }); return; }
-  if (req.user!.role === 'USER' && ticket.creator.id !== req.user!.id) {
+  if (!canAccessTicket(req.user, { creatorId: ticket.creator.id, assigneeId: ticket.assignee?.id ?? null, status: ticket.status })) {
     res.status(403).json({ error: 'Access denied' }); return;
   }
   res.json(ticket);
@@ -126,7 +154,9 @@ ticketsRouter.post('/', upload.array('attachments', 5), validate(CreateTicketSch
 
 // PUT /api/tickets/:id/status
 ticketsRouter.put('/:id/status', async (req: AuthRequest, res: Response) => {
-  const { status } = req.body as { status: string };
+  const parsed = UpdateStatusSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'Invalid status' }); return; }
+  const { status } = parsed.data;
   const ticket = await prisma.ticket.findUnique({ where: { id: req.params['id'] } });
   if (!ticket) { res.status(404).json({ error: 'Not found' }); return; }
 
@@ -138,10 +168,14 @@ ticketsRouter.put('/:id/status', async (req: AuthRequest, res: Response) => {
     if (ticket.creatorId !== user.id) { res.status(403).json({ error: 'Access denied' }); return; }
   } else if (user.role === 'AGENT') {
     if (!['IN_PROGRESS', 'WAITING', 'RESOLVED'].includes(status)) { res.status(403).json({ error: 'Invalid status for agent' }); return; }
-    if (ticket.assigneeId !== user.id) { res.status(403).json({ error: 'Not your ticket' }); return; }
+    const canTakeUnassigned = status === 'IN_PROGRESS' && ticket.assigneeId === null && ticket.status === 'NEW';
+    if (!canTakeUnassigned && ticket.assigneeId !== user.id) { res.status(403).json({ error: 'Not your ticket' }); return; }
   }
 
   const updateData: Record<string, unknown> = { status };
+  if (user.role === 'AGENT' && status === 'IN_PROGRESS' && ticket.assigneeId === null && ticket.status === 'NEW') {
+    updateData['assigneeId'] = user.id;
+  }
   if (status === 'IN_PROGRESS' && !ticket.firstResponseAt) updateData['firstResponseAt'] = new Date();
   if (status === 'RESOLVED') {
     updateData['resolvedAt'] = new Date();
