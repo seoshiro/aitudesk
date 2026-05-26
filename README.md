@@ -2,13 +2,7 @@
 
 > Fullstack service desk platform for a college IT department: tickets, real-time chat, SLA control, multilingual knowledge base, AI/RAG support assistant, analytics, monitoring, and PDF reports.
 
-![React](https://img.shields.io/badge/React-18-2f6fed?style=flat-square)
-![TypeScript](https://img.shields.io/badge/TypeScript-strict-244a8f?style=flat-square)
-![Node](https://img.shields.io/badge/Node.js-20-1f7a4d?style=flat-square)
-![Prisma](https://img.shields.io/badge/Prisma-5-172033?style=flat-square)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-315f8c?style=flat-square)
-![Docker](https://img.shields.io/badge/Docker-Compose-1d63ed?style=flat-square)
-![i18n](https://img.shields.io/badge/i18n-RU%20%2F%20EN%20%2F%20KK-111827?style=flat-square)
+`React 18` · `TypeScript` · `Vite` · `Node.js 20` · `Express` · `Prisma` · `PostgreSQL` · `Socket.IO` · `i18next` · `Docker Compose`
 
 **Live demo:** [aitudesk.vercel.app](https://aitudesk.vercel.app)  
 **Backend health:** [aitudesk-backend.onrender.com/api/health](https://aitudesk-backend.onrender.com/api/health)  
