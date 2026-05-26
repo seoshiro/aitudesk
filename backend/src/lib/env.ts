@@ -12,11 +12,21 @@ function splitOrigins(value: string | undefined): string[] {
 }
 
 export function getAccessTokenSecret(): string {
-  return process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET ?? 'fallback_secret';
+  const secret = process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET;
+  if (secret) return secret;
+  if (isProduction) {
+    throw new Error('JWT_ACCESS_SECRET or JWT_SECRET must be set in production');
+  }
+  return 'aitudesk_jwt_super_secret_key_change_in_production';
 }
 
 export function getRefreshTokenSecret(): string {
-  return process.env.JWT_REFRESH_SECRET ?? 'refresh_secret';
+  const secret = process.env.JWT_REFRESH_SECRET;
+  if (secret) return secret;
+  if (isProduction) {
+    throw new Error('JWT_REFRESH_SECRET must be set in production');
+  }
+  return 'aitudesk_refresh_secret_change_in_production';
 }
 
 export function getAllowedOrigins(): string[] {

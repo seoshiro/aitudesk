@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
-import { z } from 'zod';
-import path from 'path';
+import { z, ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { upload } from '../middleware/upload';
@@ -11,6 +11,11 @@ usersRouter.use(authenticate);
 const UpdateProfileSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   email: z.string().email().optional(),
+});
+
+const UpdateRoleSchema = z.object({
+  role: z.enum(['USER', 'AGENT', 'ADMIN']),
+  specializations: z.array(z.enum(['HARDWARE', 'SOFTWARE', 'NETWORK', 'OTHER'])).optional(),
 });
 
 // GET /api/users/me
@@ -32,9 +37,13 @@ usersRouter.put('/me', async (req: AuthRequest, res: Response) => {
       select: { id: true, name: true, email: true, role: true, avatarUrl: true },
     });
     res.json(user);
-  } catch (err: any) {
-    if (err.name === 'ZodError') {
+  } catch (err: unknown) {
+    if (err instanceof ZodError) {
       res.status(400).json({ error: 'Validation error', details: err.errors });
+      return;
+    }
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      res.status(409).json({ error: 'Email already in use' });
       return;
     }
     res.status(500).json({ error: 'Internal server error' });
@@ -73,11 +82,19 @@ usersRouter.get('/agents', requireRole('ADMIN', 'AGENT'), async (_req, res: Resp
 
 // PUT /api/users/:id/role (admin)
 usersRouter.put('/:id/role', requireRole('ADMIN'), async (req, res: Response) => {
-  const { role, specializations } = req.body as { role: string; specializations?: string[] };
-  const user = await prisma.user.update({
-    where: { id: req.params['id'] },
-    data: { role: role as 'USER' | 'AGENT' | 'ADMIN', ...(specializations && { specializations: specializations as ('HARDWARE' | 'SOFTWARE' | 'NETWORK' | 'OTHER')[] }) },
-    select: { id: true, name: true, email: true, role: true, specializations: true },
-  });
-  res.json(user);
+  try {
+    const { role, specializations } = UpdateRoleSchema.parse(req.body);
+    const user = await prisma.user.update({
+      where: { id: req.params['id'] },
+      data: { role, ...(specializations && { specializations }) },
+      select: { id: true, name: true, email: true, role: true, specializations: true },
+    });
+    res.json(user);
+  } catch (err: unknown) {
+    if (err instanceof ZodError) {
+      res.status(400).json({ error: 'Validation error', details: err.errors });
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });

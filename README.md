@@ -593,14 +593,14 @@ npm run test:coverage # однократный прогон + отчёт по п
 
 Файлы тестов: `backend/tests/*.test.ts`, конфигурация: `backend/vitest.config.ts`, setup: `backend/tests/setup.ts`.
 
-### Покрытие (114 тестов, 12 модулей)
+### Покрытие (121 тест, 12 модулей)
 
 | Модуль | Кол-во | Что тестируется |
 |---|---|---|
 | `auth` | 12 | register (успех, дубликат, невалидный ввод), login (верный/неверный пароль), logout, refresh без cookie |
-| `tickets` | 28 | Создание, список (фильтры, пагинация, поиск), получение по ID, контроль доступа USER, смена статусов (IN_PROGRESS → RESOLVED → CLOSED), переназначение (ADMIN), рейтинг (1–5, только CLOSED, только создатель) |
+| `tickets` | 31 | Создание, список (фильтры, пагинация, поиск), получение по ID, контроль доступа USER/AGENT, взятие свободной NEW-заявки агентом, смена статусов, переназначение (ADMIN), рейтинг |
 | `users` | 11 | Профиль, обновление, список (ADMIN), смена ролей (ADMIN), агенты, RBAC |
-| `messages` | 6 | Получение, создание, INTERNAL-запрет для USER, пустой контент, 404 |
+| `messages` | 9 | Получение, создание, RBAC доступа к тикету, INTERNAL-запрет для USER, пустой контент, 404 |
 | `dashboard` | 10 | Статистика по роли (USER/AGENT/ADMIN), tickets-by-day, by-category, agents, RBAC |
 | `knowledge` | 12+ | Список, поиск, фильтр по категории, локализация RU/EN/KK, viewCount++, CRUD (ADMIN), RBAC |
 | `notifications` | 4 | Список + unreadCount, read-all, read по id, 401 |
