@@ -1,7 +1,7 @@
 {
   "private": true,
   "engines": {
-    "node": ">=20 <21"
+    "node": "24.x"
   },
   "scripts": {
     "build:backend": "npm run build --prefix backend",
