@@ -43,6 +43,38 @@ AituDesk is built as a complete diploma-ready product rather than a mockup. It i
 
 ---
 
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser["React SPA<br/>Vercel"] -->|REST + JWT| API
+  Browser <-->|Socket.IO| WS
+  subgraph Render ["Render — Node.js 20"]
+    API["Express API<br/>Zod validation, RBAC, rate limits"]
+    WS["Socket.IO<br/>ticket rooms, typing, notifications"]
+    SLA["SLA checker<br/>every 60 s"]
+    PDF["PDF worker<br/>worker_threads + pdf-lib"]
+    API --> PDF
+  end
+  API --> DB[("PostgreSQL<br/>Neon, Prisma migrations")]
+  WS --> DB
+  SLA --> DB
+  API -->|KB context| LLM["OpenAI-compatible LLM<br/>Groq by default"]
+  Prom["Prometheus + Grafana<br/>local stack"] -->|"/metrics, bearer token"| API
+```
+
+### Key decisions
+
+**ADR-1. Modular Express monolith instead of microservices.** Tickets, chat, SLA, knowledge base and reports share one data model and one deployment, which fits a single college IT team and a free Render instance. Routes, services and middleware are separated (`routes/`, `services/`, `middleware/`) so a module can be extracted later. Trade-off: one process handles HTTP, WebSockets and the SLA timer, so CPU-heavy work is pushed off the event loop (PDF generation runs in `worker_threads`).
+
+**ADR-2. PostgreSQL + Prisma with versioned migrations.** Relational data (users, tickets, messages, SLA policies, translations) needs constraints and transactions. Deploys run `prisma migrate deploy` from `prisma/migrations`; the original `db push` database was baselined once as `0_init`. Seeding is opt-in per deploy (`RUN_SEED_ON_DEPLOY`). Trade-off: schema changes now require a committed migration instead of an implicit push, which is slower but reviewable and safe for existing data.
+
+**ADR-3. Keyword retrieval over the multilingual knowledge base instead of a vector store.** The assistant pulls up to three relevant KB articles in the user's language (case-insensitive title/content match plus frequency re-ranking) and sends them as context to any OpenAI-compatible provider. With ~24 curated articles this is accurate enough, needs no embedding pipeline and stays on free tiers. Trade-off: recall depends on wording; the route therefore scopes answers to IT support and falls back to a clarification or an operator handoff instead of guessing.
+
+**ADR-4. Real-time updates with Socket.IO rooms per ticket.** Agents and users see messages, status changes and typing state without polling; the socket handshake is authenticated with the same JWT as the REST API. Trade-off: on Render Free the instance sleeps when idle, so the first connection after a pause is slow.
+
+---
+
 ## Demo Accounts
 
 | Role | Email | Password |
