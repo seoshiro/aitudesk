@@ -29,23 +29,27 @@ export function getRefreshTokenSecret(): string {
   return 'aitudesk_refresh_secret_change_in_production';
 }
 
+// Local origins are trusted outside production, and in production only when
+// explicitly opted in (the local docker-compose stack runs with NODE_ENV=production).
+function localOriginsAllowed(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.ALLOW_LOCALHOST_ORIGINS === 'true';
+}
+
 export function getAllowedOrigins(): string[] {
   return [
     ...splitOrigins(process.env.CORS_ORIGIN),
     ...splitOrigins(process.env.FRONTEND_URL),
     ...splitOrigins(process.env.CLIENT_URL),
     ...splitOrigins(process.env.EXTRA_CORS_ORIGINS),
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:7754',
-    'http://localhost:80',
-    'http://localhost',
   ];
 }
 
 export function isOriginAllowed(origin: string | undefined): boolean {
+  // Requests without an Origin header (curl, server-to-server, health checks)
+  // are not cross-origin browser requests, so CORS does not apply to them.
   if (!origin) return true;
-  return getAllowedOrigins().includes(origin) || LOCAL_ORIGIN_RE.test(origin);
+  if (getAllowedOrigins().includes(origin)) return true;
+  return localOriginsAllowed() && LOCAL_ORIGIN_RE.test(origin);
 }
 
 export function getRefreshCookieOptions(expires?: Date): CookieOptions {

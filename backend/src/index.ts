@@ -75,8 +75,15 @@ app.use('/api/ai', aiRouter);
 
 app.get('/api/health', (_req, res) => { res.json({ status: 'ok', timestamp: new Date().toISOString() }); });
 
-// ── Prometheus metrics (no auth) ──────────────────────────────────────────
-app.get('/metrics', async (_req, res) => {
+// ── Prometheus metrics ───────────────────────────────────────────────────────
+// Open on the private docker-compose network; when METRICS_TOKEN is set
+// (as on the public Render deployment) scrapers must send it as a Bearer token.
+app.get('/metrics', async (req, res) => {
+  const token = process.env.METRICS_TOKEN;
+  if (token && req.headers.authorization !== `Bearer ${token}`) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
 });

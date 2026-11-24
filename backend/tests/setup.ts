@@ -1,5 +1,9 @@
 import { vi, beforeEach } from 'vitest';
 
+// Tests must not depend on a local backend/.env. The AI provider is mocked,
+// so any non-empty key enables the route under test.
+process.env.AI_API_KEY ??= 'test-ai-key';
+
 // ── Mock Prisma ──────────────────────────────────────────────────────────────
 const mockPrismaModels = {
   user: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },

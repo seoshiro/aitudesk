@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
+import { authLimiter, loginLimiter } from '../middleware/rateLimit';
 import { getAccessTokenSecret, getRefreshCookieOptions, getRefreshTokenSecret } from '../lib/env';
 
 export const authRouter = Router();
@@ -32,7 +33,7 @@ const LoginSchema = z.object({
 });
 
 // POST /api/auth/register
-authRouter.post('/register', validate(RegisterSchema), async (req, res: Response) => {
+authRouter.post('/register', authLimiter, validate(RegisterSchema), async (req, res: Response) => {
   const { name, email, password } = req.body as { name: string; email: string; password: string };
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) { res.status(409).json({ error: 'Email already in use' }); return; }
@@ -49,7 +50,7 @@ authRouter.post('/register', validate(RegisterSchema), async (req, res: Response
 });
 
 // POST /api/auth/login
-authRouter.post('/login', validate(LoginSchema), async (req, res: Response) => {
+authRouter.post('/login', loginLimiter, validate(LoginSchema), async (req, res: Response) => {
   const { email, password } = req.body as { email: string; password: string };
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) { res.status(401).json({ error: 'Invalid credentials' }); return; }
@@ -66,7 +67,7 @@ authRouter.post('/login', validate(LoginSchema), async (req, res: Response) => {
 });
 
 // POST /api/auth/refresh
-authRouter.post('/refresh', async (req, res: Response) => {
+authRouter.post('/refresh', authLimiter, async (req, res: Response) => {
   const token = (req.cookies as Record<string, string>)['refreshToken'];
   if (!token) { res.status(401).json({ error: 'No refresh token' }); return; }
 
