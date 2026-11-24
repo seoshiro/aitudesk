@@ -39,3 +39,6 @@ frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local pgAdmin password file (copy from pgadmin/pgpass.example)
+pgadmin/pgpass

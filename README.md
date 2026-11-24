@@ -60,6 +60,9 @@ The seed script is idempotent. It creates base users, agents, SLA policies, demo
 ```bash
 git clone https://github.com/seoshiro/aitudesk.git
 cd aitudesk
+cp .env.example .env
+cp backend/.env.example backend/.env   # задайте свои секреты; .env не коммитятся
+cp pgadmin/pgpass.example pgadmin/pgpass  # пароль должен совпадать с POSTGRES_PASSWORD
 docker compose up -d --build
 ```
 
@@ -109,6 +112,9 @@ Production deployment instructions are in [DEPLOYMENT.md](DEPLOYMENT.md).
 ```bash
 git clone <repo-url> aitudesk
 cd aitudesk
+cp .env.example .env
+cp backend/.env.example backend/.env   # задайте свои секреты; .env не коммитятся
+cp pgadmin/pgpass.example pgadmin/pgpass  # пароль должен совпадать с POSTGRES_PASSWORD
 docker compose up -d --build
 ```
 
@@ -350,18 +356,18 @@ Seed создаёт базовые KB articles через idempotent upsert и �
 
 ## Конфигурация
 
-Корневой `.env` (порты и БД):
+Корневой `.env` (порты и БД), шаблон — `.env.example`:
 ```env
 POSTGRES_DB=aitudesk
 POSTGRES_USER=aitudesk_user
 POSTGRES_PASSWORD=change-me-local-db-password
 BACKEND_PORT=4829
 FRONTEND_PORT=7754
-PGADMIN_EMAIL=admin@aitudesk.kz
+PGADMIN_EMAIL=admin@example.com
 PGADMIN_PASSWORD=change-me-local-pgadmin-password
 ```
 
-`backend/.env` — JWT, upload, seed-пароли, AI-провайдер. Значения по умолчанию подходят для локального запуска.
+`backend/.env` — JWT, upload, seed-пароли, AI-провайдер; шаблон — `backend/.env.example`. Файлы `.env` в git не хранятся.
 
 ```env
 # AI Assistant — любой OpenAI-совместимый провайдер
@@ -427,13 +433,13 @@ npm run dev             # :5173 (Vite)
 
 ## pgAdmin
 
-1. Откройте http://localhost:5050 → вход `admin@aitudesk.kz` / `change-me-local-pgadmin-password`.
+1. Откройте http://localhost:5050 → вход `PGADMIN_EMAIL` / `PGADMIN_PASSWORD` из корневого `.env`.
 2. **Add New Server** → Connection:
    - Host: `postgres`
    - Port: `5432`
    - Database: `aitudesk`
    - Username: `aitudesk_user`
-   - Password: `change-me-local-db-password`
+   - Password: значение `POSTGRES_PASSWORD` из корневого `.env`
 
 ---
 
