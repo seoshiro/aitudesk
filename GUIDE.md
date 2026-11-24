@@ -325,18 +325,18 @@ docker compose up -d --build
 Открыть http://localhost:7754 — показать что всё работает.
 
 ### 2. Демо пользователя (3 мин)
-- Залогиниться как `user1@aitudesk.kz` / `User123!`
+- Залогиниться как `user1@aitudesk.kz` / `Demo-User-2026!`
 - Создать тикет с вложением
 - Показать, что тикет появился в списке
 
 ### 3. Демо агента (3 мин)
-- Залогиниться как `agent1@aitudesk.kz` / `Agent123!`
+- Залогиниться как `agent1@aitudesk.kz` и пароль из `SEED_AGENT_PASSWORD`
 - Открыть тикет, написать ответ в **реал-тайм чате**
 - Сменить статус на `IN_PROGRESS` → `RESOLVED`
 - Показать внутреннюю заметку (INTERNAL)
 
 ### 4. Демо администратора (3 мин)
-- Залогиниться как `admin@aitudesk.kz` / `Admin123!`
+- Залогиниться как `admin@aitudesk.kz` и пароль из `SEED_ADMIN_PASSWORD`
 - Показать **дашборд**: графики, KPI, топ агентов
 - Переназначить тикет другому агенту
 - Скачать **PDF-отчёт** за месяц
@@ -493,7 +493,7 @@ docker compose up -d --build
 - **Запустить Docker Desktop**
 - **Поднять проект** — `docker compose up -d --build`
 - **Проверить frontend** — http://localhost:7754
-- **Проверить логин** — `admin@aitudesk.kz / Admin123!`
+- **Проверить логин** — `admin@aitudesk.kz` + `SEED_ADMIN_PASSWORD`
 - **Проверить Grafana** — http://localhost:9911
 - **Проверить PDF** — скачать отчёт за текущий месяц
 - **Проверить AI key** — `backend/.env`

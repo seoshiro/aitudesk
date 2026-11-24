@@ -47,9 +47,9 @@ AituDesk is built as a complete diploma-ready product rather than a mockup. It i
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | `admin@aitudesk.kz` | `Admin123!` |
-| Agent | `agent1@aitudesk.kz` | `Agent123!` |
-| User | `user1@aitudesk.kz` | `User123!` |
+| User | `user1@aitudesk.kz` | `Demo-User-2026!` |
+
+The public demo exposes only a regular user. Admin and agent accounts exist, but their passwords are set through `SEED_ADMIN_PASSWORD` / `SEED_AGENT_PASSWORD` and are never published. Locally they come from your `backend/.env`.
 
 The seed script is idempotent. It creates base users, agents, SLA policies, demo tickets, and 24 multilingual KB articles without deleting existing user tickets/messages/ratings during ordinary startup.
 
@@ -139,11 +139,11 @@ docker compose up -d --build
 
 | Роль | Email | Пароль |
 |---|---|---|
-| Администратор | `admin@aitudesk.kz` | `Admin123!` |
-| Агент 1 | `agent1@aitudesk.kz` | `Agent123!` |
-| Агент 2 | `agent2@aitudesk.kz` | `Agent123!` |
-| Агент 3 | `agent3@aitudesk.kz` | `Agent123!` |
-| Пользователи | `user1@aitudesk.kz` … `user5@aitudesk.kz` | `User123!` |
+| Администратор | `admin@aitudesk.kz` | значение `SEED_ADMIN_PASSWORD` |
+| Агенты 1–3 | `agent1@aitudesk.kz` … `agent3@aitudesk.kz` | значение `SEED_AGENT_PASSWORD` |
+| Пользователи | `user1@aitudesk.kz` … `user5@aitudesk.kz` | `Demo-User-2026!` (публичный демо-вход) |
+
+Пароли администратора и агентов задаются в `backend/.env` (локально) или в переменных Render и нигде не публикуются.
 
 После seed в базе ~20 тикетов (разные статусы/приоритеты), сообщения, оценки и **24 статьи базы знаний** с тегами (по всем категориям: SOFTWARE, HARDWARE, NETWORK, ACCESS, OTHER).
 

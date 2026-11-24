@@ -3,9 +3,25 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';
-const AGENT_PASSWORD = process.env.SEED_AGENT_PASSWORD ?? 'Agent123!';
-const USER_PASSWORD = process.env.SEED_USER_PASSWORD ?? 'User123!';
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Admin and agent passwords must come from the environment in production.
+// The local defaults below exist only for docker-compose development.
+function seedPassword(name: string, localDefault: string): string {
+  const value = process.env[name];
+  if (value) return value;
+  if (isProduction) throw new Error(`${name} must be set when seeding in production`);
+  return localDefault;
+}
+
+const ADMIN_PASSWORD = seedPassword('SEED_ADMIN_PASSWORD', 'local-admin-password');
+const AGENT_PASSWORD = seedPassword('SEED_AGENT_PASSWORD', 'local-agent-password');
+// The regular user account is the public demo login shown on the login page.
+const USER_PASSWORD = process.env.SEED_USER_PASSWORD ?? 'Demo-User-2026!';
+
+// Seed never touches existing passwords unless rotation is requested explicitly.
+const ROTATE_PASSWORDS = process.env.SEED_ROTATE_PASSWORDS === 'true';
+const passwordUpdate = (passwordHash: string) => (ROTATE_PASSWORDS ? { passwordHash } : {});
 
 const seedTitleTranslations: Record<string, { en: string; kk: string }> = {
   'Как сбросить пароль учётной записи': {
@@ -133,7 +149,7 @@ async function main(): Promise<void> {
   const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@aitudesk.kz' },
-    update: {},
+    update: passwordUpdate(adminHash),
     create: { email: 'admin@aitudesk.kz', passwordHash: adminHash, name: 'Айгерим Досова', role: Role.ADMIN, specializations: [] },
   });
 
@@ -141,17 +157,17 @@ async function main(): Promise<void> {
   const agentHash = await bcrypt.hash(AGENT_PASSWORD, 12);
   const agent1 = await prisma.user.upsert({
     where: { email: 'agent1@aitudesk.kz' },
-    update: {},
+    update: passwordUpdate(agentHash),
     create: { email: 'agent1@aitudesk.kz', passwordHash: agentHash, name: 'Дамир Сейткали', role: Role.AGENT, specializations: [TicketCategory.HARDWARE, TicketCategory.NETWORK] },
   });
   const agent2 = await prisma.user.upsert({
     where: { email: 'agent2@aitudesk.kz' },
-    update: {},
+    update: passwordUpdate(agentHash),
     create: { email: 'agent2@aitudesk.kz', passwordHash: agentHash, name: 'Айша Нурланова', role: Role.AGENT, specializations: [TicketCategory.SOFTWARE] },
   });
   const agent3 = await prisma.user.upsert({
     where: { email: 'agent3@aitudesk.kz' },
-    update: {},
+    update: passwordUpdate(agentHash),
     create: { email: 'agent3@aitudesk.kz', passwordHash: agentHash, name: 'Бекзат Ахметов', role: Role.AGENT, specializations: [TicketCategory.NETWORK, TicketCategory.OTHER] },
   });
   console.log('✅ Agents created');
@@ -163,7 +179,7 @@ async function main(): Promise<void> {
   for (let i = 1; i <= 5; i++) {
     const u = await prisma.user.upsert({
       where: { email: `user${i}@aitudesk.kz` },
-      update: {},
+      update: passwordUpdate(userHash),
       create: { email: `user${i}@aitudesk.kz`, passwordHash: userHash, name: userNames[i - 1] ?? `User ${i}`, role: Role.USER },
     });
     users.push(u);

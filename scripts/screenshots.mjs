@@ -27,9 +27,10 @@ const OUT_DIR = process.env.OUT_DIR || path.resolve('screenshots');
 const ROLE = (process.env.ROLE || 'ADMIN').toUpperCase();
 
 const PRESET = {
-  ADMIN: { email: 'admin@aitudesk.kz', password: 'Admin123!' },
-  AGENT: { email: 'agent1@aitudesk.kz', password: 'Agent123!' },
-  USER: { email: 'user1@aitudesk.kz', password: 'User123!' },
+  // Admin and agent passwords are not committed: pass them via PASSWORD or SEED_* env.
+  ADMIN: { email: 'admin@aitudesk.kz', password: process.env.SEED_ADMIN_PASSWORD },
+  AGENT: { email: 'agent1@aitudesk.kz', password: process.env.SEED_AGENT_PASSWORD },
+  USER: { email: 'user1@aitudesk.kz', password: process.env.SEED_USER_PASSWORD || 'Demo-User-2026!' },
 };
 const CREDS = {
   email: process.env.EMAIL || PRESET[ROLE]?.email || PRESET.ADMIN.email,

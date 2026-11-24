@@ -40,6 +40,10 @@ services:
         sync: false
       - key: SEED_USER_PASSWORD
         sync: false
+      - key: RUN_SEED_ON_DEPLOY
+        sync: false
+      - key: SEED_ROTATE_PASSWORDS
+        sync: false
       - key: AI_API_KEY
         sync: false
       - key: AI_BASE_URL
