@@ -11,11 +11,12 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "start": "node dist/index.js",
     "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "ts-node prisma/seed.ts",
     "db:studio": "prisma studio",
-    "render:build": "prisma generate && npm run build && prisma db push && npm run db:seed",
+    "render:build": "sh scripts/render-build.sh",
     "deploy:start": "npm run start",
     "test": "vitest",
     "test:coverage": "vitest --coverage"

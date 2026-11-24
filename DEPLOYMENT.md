@@ -124,9 +124,12 @@ UPLOAD_DIR=uploads
 MAX_FILE_SIZE_MB=10
 MAX_FILES_PER_TICKET=5
 
-SEED_ADMIN_PASSWORD=Admin123!
-SEED_AGENT_PASSWORD=Agent123!
-SEED_USER_PASSWORD=User123!
+SEED_ADMIN_PASSWORD=<strong random password, not published>
+SEED_AGENT_PASSWORD=<strong random password, not published>
+SEED_USER_PASSWORD=Demo-User-2026!
+# Set to true only for a deploy that should seed or rotate seed passwords
+RUN_SEED_ON_DEPLOY=false
+SEED_ROTATE_PASSWORDS=false
 
 # Optional. If empty, /api/ai/chat returns a controlled configuration error.
 AI_API_KEY=
@@ -217,9 +220,8 @@ Frontend:
 
 1. Open `https://your-frontend.vercel.app`.
 2. Login as:
-   - `admin@aitudesk.kz` / `Admin123!`
-   - `agent1@aitudesk.kz` / `Agent123!`
-   - `user1@aitudesk.kz` / `User123!`
+   - `user1@aitudesk.kz` / `Demo-User-2026!` (public demo user)
+   - admin / agent: passwords from `SEED_ADMIN_PASSWORD` / `SEED_AGENT_PASSWORD`
 3. Check:
    - Dashboard loads.
    - Ticket list loads.

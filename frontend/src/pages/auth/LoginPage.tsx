@@ -20,9 +20,9 @@ interface LoginResponse {
 }
 
 const DEMO: { labelKey: string; email: string; password: string }[] = [
-  { labelKey: 'auth.login.demo.admin', email: 'admin@aitudesk.kz', password: 'Admin123!' },
-  { labelKey: 'auth.login.demo.agent', email: 'agent1@aitudesk.kz', password: 'Agent123!' },
-  { labelKey: 'auth.login.demo.user', email: 'user1@aitudesk.kz', password: 'User123!' },
+  // Public demo exposes only a regular user. Admin and agent passwords are
+  // set through SEED_* environment variables and are never published.
+  { labelKey: 'auth.login.demo.user', email: 'user1@aitudesk.kz', password: 'Demo-User-2026!' },
 ];
 
 export default function LoginPage() {
@@ -30,8 +30,8 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [showPass, setShowPass] = React.useState(false);
-  const [email, setEmail] = React.useState('admin@aitudesk.kz');
-  const [password, setPassword] = React.useState('Admin123!');
+  const [email, setEmail] = React.useState('user1@aitudesk.kz');
+  const [password, setPassword] = React.useState('Demo-User-2026!');
   const [loading, setLoading] = React.useState<string | null>(null);
 
   async function login(e: string, p: string, id: string) {
@@ -183,7 +183,7 @@ export default function LoginPage() {
               <div className="flex-1 h-px bg-border" />
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="mt-4 grid grid-cols-1 gap-2">
               {DEMO.map((d) => (
                 <DemoBtn
                   key={d.email}
